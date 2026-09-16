@@ -82,7 +82,7 @@ def get_orchestrator():
 
 def initialize_orchestrator():
     """Load the cached orchestrator into session state."""
-    if st.session_state.orchestrator is None:
+    if 'orchestrator' not in st.session_state or st.session_state.orchestrator is None:
         try:
             st.session_state.orchestrator = get_orchestrator()
             return True
