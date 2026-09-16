@@ -24,31 +24,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better UI
-st.markdown("""
-<style>
-    .agent-card {
-        padding: 20px;
-        border-radius: 10px;
-        background-color: #f0f2f6;
-        margin: 10px 0;
-    }
-    .agent-name {
-        font-size: 18px;
-        font-weight: bold;
-        color: #1f77b4;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Initialize session state
 if 'orchestrator' not in st.session_state:
     st.session_state.orchestrator = None
@@ -98,6 +73,31 @@ def main():
     # Title and Description
     st.title("🤖 Multi-Agent AI Portfolio Advisor")
     
+    # Custom CSS for better UI
+    st.markdown("""
+    <style>
+        .agent-card {
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f0f2f6;
+            margin: 10px 0;
+        }
+        .agent-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f77b4;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 24px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Check API key
     if not os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") == "your_api_key_here":
         st.error("⚠️ GEMINI_API_KEY is not set. Please add it to your .env file.")
@@ -146,6 +146,16 @@ def main():
             ["Wealth Creation", "Regular Income", "Retirement Planning", "Tax Saving", "Short-term Gains"],
             default=["Wealth Creation"]
         )
+        
+        st.subheader("🔍 Filters")
+        market_cap_filter = st.multiselect(
+            "Market Cap",
+            ["Large Cap", "Mid Cap", "Small Cap", "Multi Cap"],
+            default=["Large Cap", "Mid Cap", "Small Cap", "Multi Cap"],
+            help="Filter suggestions based on market capitalization"
+        )
+        
+        st.markdown("---")
         
         st.subheader("📝 Preferences")
         preferences = st.text_area(
@@ -205,6 +215,7 @@ def main():
                         "risk_tolerance": risk_tolerance,
                         "goals": investment_goals,
                         "preferences": preferences,
+                        "market_cap_preference": market_cap_filter,
                         "tax_bracket": "30%"  # Can be made configurable
                     },
                     "market_context": {

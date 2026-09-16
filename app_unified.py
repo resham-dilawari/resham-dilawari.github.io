@@ -227,18 +227,19 @@ st.markdown("""
         color: #1a1a1a !important;
         font-weight: 800 !important;
         font-size: 48px !important;
+        margin-top: 0px !important;
         margin-bottom: 10px !important;
-        text-align: center !important;
+        text-align: left !important;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #11998e 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-clip: text;
+        display: inline-block;
     }
     
-    h3 {
+    h2, h3 {
         color: #555555 !important;
         font-weight: 600 !important;
-        text-align: center !important;
+        text-align: left !important;
         margin-bottom: 30px !important;
     }
     
