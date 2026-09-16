@@ -345,8 +345,19 @@ def main():
         st.error("⚠️ GEMINI_API_KEY is not set. Please add it to your .env file.")
         st.stop()
     
+    # Check query parameters for routing
+    if "page" in st.query_params:
+        page_param = st.query_params["page"]
+        if page_param == "aiportfolioadvisor":
+            st.session_state.selected_product = "stocks"
+        elif page_param == "merchantunderwriting":
+            st.session_state.selected_product = "underwriting"
+        elif page_param == "home":
+            st.session_state.selected_product = None
+    
     # Product Selection Screen
     if st.session_state.selected_product is None:
+        st.query_params["page"] = "home"
         st.title("🤖 AI Advisor Platform")
         st.markdown("### Select Your Product")
         
@@ -373,12 +384,13 @@ def main():
             
             if st.button("🚀 Launch Stock Advisor", key="stock_btn", use_container_width=True):
                 st.session_state.selected_product = "stocks"
+                st.query_params["page"] = "aiportfolioadvisor"
                 st.rerun()
         
         with col2:
             st.markdown("""
             <div class="product-card product-card-green">
-                <span class="product-icon">🏢</span>
+                <span class="product-icon">🏪</span>
                 <div class="product-title">Merchant Underwriting</div>
                 <div class="product-desc">
                     Automated KYC/KYB risk assessment for B2B fintech platforms.
@@ -396,6 +408,7 @@ def main():
             
             if st.button("🚀 Launch Merchant Underwriting", key="underwrite_btn", use_container_width=True):
                 st.session_state.selected_product = "underwriting"
+                st.query_params["page"] = "merchantunderwriting"
                 st.rerun()
         
         # Feature Comparison
@@ -494,6 +507,9 @@ def main():
     
     # Route to selected product
     elif st.session_state.selected_product == "stocks":
+        # Ensure query params reflect current page
+        st.query_params["page"] = "aiportfolioadvisor"
+        
         # Breadcrumb navigation at top of sidebar
         with st.sidebar:
             # Clickable breadcrumb
@@ -501,6 +517,7 @@ def main():
             
             if breadcrumb_clicked:
                 st.session_state.selected_product = None
+                st.query_params["page"] = "home"
                 st.rerun()
             
             st.markdown("---")
@@ -511,6 +528,9 @@ def main():
         return  # Prevent home page content from rendering
     
     elif st.session_state.selected_product == "underwriting":
+        # Ensure query params reflect current page
+        st.query_params["page"] = "merchantunderwriting"
+        
         # Breadcrumb navigation at top of sidebar  
         with st.sidebar:
             # Clickable breadcrumb
@@ -518,6 +538,7 @@ def main():
             
             if breadcrumb_clicked:
                 st.session_state.selected_product = None
+                st.query_params["page"] = "home"
                 st.rerun()
             
             st.markdown("---")

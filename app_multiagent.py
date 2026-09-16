@@ -97,19 +97,6 @@ def main():
     
     # Title and Description
     st.title("🤖 Multi-Agent AI Portfolio Advisor")
-    st.markdown("""
-    **Powered by Advanced Agentic AI Architecture**
-    
-    This system employs 7+ specialized AI agents working collaboratively:
-    - 🔍 **Fundamental Analysis Agent** - Company financials & valuation
-    - 📈 **Technical Analysis Agent** - Charts, patterns & momentum
-    - 📰 **Sentiment Analysis Agent** - News & market psychology
-    - ⚠️ **Risk Assessment Agent** - Portfolio risk & diversification
-    - 🎯 **Portfolio Optimizer Agent** - Asset allocation & rebalancing
-    - 🔬 **Market Research Agent** - Sector trends & opportunities
-    - 💰 **Tax Optimization Agent** - Tax-efficient strategies
-    - 🎭 **Orchestrator Agent** - Coordinates all agents & synthesizes insights
-    """)
     
     # Check API key
     if not os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") == "your_api_key_here":
@@ -132,11 +119,10 @@ def main():
         )
         
         st.subheader("📊 Your Portfolio")
-        portfolio_input = st.text_area(
-            "Enter Stock Tickers (one per line)",
-            placeholder="RELIANCE.NS\nTCS.NS\nINFY.NS\nHDFCBANK.NS",
-            height=100,
-            help="Use .NS for NSE and .BO for BSE"
+        portfolio_input = st.text_input(
+            "Enter Stock Tickers",
+            placeholder="e.g. RELIANCE, TCS, INFY",
+            help="Enter tickers separated by commas, spaces, or anything else."
         )
         
         st.subheader("💵 Investment Details")
@@ -173,7 +159,15 @@ def main():
     # Main content area
     if analyze_button:
         # Parse portfolio tickers
-        tickers = [t.strip() for t in portfolio_input.split("\n") if t.strip()]
+        import re
+        raw_tickers = [t.strip().upper() for t in re.split(r'[,\s\n]+', portfolio_input) if t.strip()]
+        tickers = []
+        for t in raw_tickers:
+            if t.endswith('.NS') or t.endswith('.BO'):
+                tickers.append(t)
+            else:
+                tickers.extend([f"{t}.NS", f"{t}.BO"])
+        tickers = list(dict.fromkeys(tickers))
         
         if not tickers and analysis_mode != "Investment Suggestions Only":
             st.warning("⚠️ Please enter at least one ticker for portfolio analysis.")
@@ -314,21 +308,21 @@ def main():
         with col1:
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">🔍 Fundamental Agent</div>
+                <div class="agent-name">🔍 Fundamental Analysis Agent</div>
                 Analyzes company financials, valuations, and business models
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">📈 Technical Agent</div>
+                <div class="agent-name">📈 Technical Analysis Agent</div>
                 Identifies patterns, trends, and momentum signals
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">📰 Sentiment Agent</div>
+                <div class="agent-name">📰 Sentiment Analysis Agent</div>
                 Processes news and gauges market psychology
             </div>
             """, unsafe_allow_html=True)
@@ -336,21 +330,21 @@ def main():
         with col2:
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">⚠️ Risk Agent</div>
+                <div class="agent-name">⚠️ Risk Assessment Agent</div>
                 Assesses portfolio risk and diversification
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">🎯 Optimizer Agent</div>
+                <div class="agent-name">🎯 Portfolio Optimizer Agent</div>
                 Optimizes asset allocation and rebalancing
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">🔬 Research Agent</div>
+                <div class="agent-name">🔬 Market Research Agent</div>
                 Explores sectors and identifies opportunities
             </div>
             """, unsafe_allow_html=True)
@@ -358,14 +352,14 @@ def main():
         with col3:
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">💰 Tax Agent</div>
+                <div class="agent-name">💰 Tax Optimization Agent</div>
                 Provides tax-efficient strategies
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("""
             <div class="agent-card">
-                <div class="agent-name">🎭 Orchestrator</div>
+                <div class="agent-name">👨‍💼 Orchestrator Agent</div>
                 Coordinates all agents and synthesizes insights
             </div>
             """, unsafe_allow_html=True)
