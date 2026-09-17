@@ -107,10 +107,40 @@ def main():
     if not initialize_orchestrator():
         st.stop()
     
+    st.info("Configure your portfolio below and click 'Run Multi-Agent Analysis' to begin!")
+    
+    # Portfolio Source
+    st.markdown("### 💼 Portfolio Source")
+    tab_manual, tab_upload, tab_broker = st.tabs(["✍️ Manual Entry", "📁 Upload File", "🔗 Connect Broker"])
+    
+    portfolio_input = ""
+    with tab_manual:
+        portfolio_input = st.text_input(
+            "Enter Stock Tickers",
+            placeholder="e.g. RELIANCE, TCS, INFY",
+            help="Enter tickers separated by commas, spaces, or anything else."
+        )
+    with tab_upload:
+        uploaded_file = st.file_uploader("Upload Demat/Brokerage Statement (CSV, XLSX)", type=["csv", "xlsx"])
+        if uploaded_file:
+            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+            st.info("Extracting holdings from statement... (Mocked for demo)")
+            portfolio_input = "RELIANCE, TCS, HDFCBANK, ICICIBANK, INFY" # Mock data
+    with tab_broker:
+        st.write("Securely connect to your broker to import holdings:")
+        b_col1, b_col2, b_col3, b_col4 = st.columns(4)
+        with b_col1:
+            if st.button("Zerodha Kite", use_container_width=True): st.toast("Connecting to Zerodha...")
+        with b_col2:
+            if st.button("Groww", use_container_width=True): st.toast("Connecting to Groww...")
+        with b_col3:
+            if st.button("Upstox", use_container_width=True): st.toast("Connecting to Upstox...")
+        with b_col4:
+            if st.button("Angel One", use_container_width=True): st.toast("Connecting to Angel One...")
+        st.caption("🔒 Secured via Account Aggregator. (Integration Placeholder)")
+
     # Configuration / Filters
     st.markdown("### ⚙️ Configuration & Filters")
-
-    st.info("Configure your portfolio below and click 'Run Multi-Agent Analysis' to begin!")
     
     # 1st Row
     col1, col2, col3 = st.columns(3)
@@ -121,51 +151,45 @@ def main():
             help="Full Advisory runs all agents for comprehensive analysis"
         )
     with col2:
-        portfolio_input = st.text_input(
-            "Enter Stock Tickers",
-            placeholder="e.g. RELIANCE, TCS, INFY",
-            help="Enter tickers separated by commas, spaces, or anything else."
-        )
-    with col3:
         corpus = st.number_input(
             "Available corpus (₹)",
             min_value=0.0,
             value=100000.0,
             step=10000.0
         )
-        
-    # 2nd Row
-    col4, col5, col6 = st.columns(3)
-    with col4:
+    with col3:
         risk_tolerance = st.select_slider(
             "Risk Tolerance",
             options=["Very Conservative", "Conservative", "Moderate", "Aggressive", "Very Aggressive"],
             value="Moderate"
         )
-    with col5:
+        
+    # 2nd Row
+    col4, col5, col6 = st.columns(3)
+    with col4:
         investment_goals = st.multiselect(
             "Investment Goals",
             ["Wealth Creation", "Regular Income", "Retirement Planning", "Tax Saving", "Short-term Gains"],
             default=["Wealth Creation"]
         )
-    with col6:
+    with col5:
         market_cap_filter = st.multiselect(
             "Market Cap",
             ["Large Cap", "Mid Cap", "Small Cap", "Multi Cap"],
             default=["Large Cap", "Mid Cap", "Small Cap", "Multi Cap"],
             help="Filter suggestions based on market capitalization"
         )
-        
-    # 3rd Row
-    col7, col8 = st.columns([2, 1])
-    with col7:
+    with col6:
         preferences = st.text_area(
             "Additional preferences",
             placeholder="e.g., Focus on IT sector, prefer dividend stocks, ESG investing",
             height=68
         )
+        
+    # 3rd Row - Action Button
+    st.markdown("<br>", unsafe_allow_html=True)
+    col7, col8, col9 = st.columns([1, 2, 1])
     with col8:
-        st.markdown("<br>", unsafe_allow_html=True)
         analyze_button = st.button("🚀 Run Multi-Agent Analysis", type="primary", use_container_width=True)
         
     st.markdown("---")
