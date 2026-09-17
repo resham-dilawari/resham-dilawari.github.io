@@ -71,7 +71,7 @@ def main():
     """Main application."""
     
     # Title and Description
-    st.title("🤖 Multi-Agent AI Portfolio Advisor")
+    st.title("🤖 Multi-Agent AI Portfolio Advisor", anchor=False)
     
     # Custom CSS for better UI
     st.markdown("""

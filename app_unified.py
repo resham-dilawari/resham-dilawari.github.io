@@ -364,7 +364,7 @@ def main():
     # Product Selection Screen
     if st.session_state.selected_product is None:
         st.query_params["page"] = "home"
-        st.title("🤖 AI Advisor Platform")
+        st.title("🤖 AI Advisor Platform", anchor=False)
         st.markdown("### Select Your Product")
         
         col1, col2 = st.columns(2, gap="medium")

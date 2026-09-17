@@ -86,7 +86,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Title
-    st.title("🏢 Merchant Underwriting & Risk Assessment")
+    st.title("🏢 Merchant Underwriting & Risk Assessment", anchor=False)
     st.markdown("""
     **AI-Powered KYC/KYB Screening for B2B Fintech Platforms**
     
