@@ -519,7 +519,8 @@ def main():
         # Breadcrumb navigation at top of main page
         # Simple text breadcrumb
         def go_home_sa():
-            st.query_params.clear()
+            st.query_params["page"] = "home"
+            st.session_state.selected_product = None
         st.button("🏠 Home  /  📈 Stock Advisor", type="tertiary", on_click=go_home_sa)
         
         # Import the stock advisor app
@@ -534,7 +535,8 @@ def main():
         # Breadcrumb navigation at top of main page  
         # Simple text breadcrumb
         def go_home_mu():
-            st.query_params.clear()
+            st.query_params["page"] = "home"
+            st.session_state.selected_product = None
         st.button("🏠 Home  /  ⚖️ Merchant Underwriting", type="tertiary", on_click=go_home_mu)
         
         # Import the underwriting app
