@@ -117,79 +117,49 @@ def main():
             st.error(f"Failed to initialize underwriting system: {e}")
             st.stop()
     
-    # Sidebar for merchant input
-    with st.sidebar:
-        st.header("📝 Merchant Application")
-        
-        st.subheader("🏢 Company Information")
-        company_name = st.text_input(
-            "Legal Business Name",
-            placeholder="e.g., Acme Trading Pvt Ltd"
-        )
-        
-        registration_number = st.text_input(
-            "Registration Number",
-            placeholder="CIN (India) or UEN (Singapore)",
-            help="Company Identification Number"
-        )
-        
-        website = st.text_input(
-            "Company Website",
-            placeholder="https://example.com"
-        )
-        
-        industry = st.selectbox(
-            "Industry",
-            ["E-commerce", "SaaS/Software", "Professional Services", "Manufacturing", 
-             "Education", "Healthcare", "Travel", "Forex Trading", "MLM", "Other"]
-        )
-        
-        country = st.selectbox(
-            "Country of Operations",
-            ["India", "Singapore", "UAE", "Other"]
-        )
-        
-        st.subheader("👥 Directors")
-        directors_input = st.text_area(
-            "Director Names (one per line)",
-            placeholder="John Doe\nJane Smith",
-            height=80
-        )
-        
-        st.subheader("📋 Business Description")
-        business_description = st.text_area(
-            "What does the company do?",
-            placeholder="Describe the business model, products/services offered...",
-            height=100
-        )
-        
-        st.subheader("💰 Financial Information (Optional)")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            revenue = st.number_input("Annual Revenue (₹)", min_value=0.0, value=0.0, step=100000.0)
-            total_assets = st.number_input("Total Assets (₹)", min_value=0.0, value=0.0, step=100000.0)
-            cash = st.number_input("Cash & Equivalents (₹)", min_value=0.0, value=0.0, step=10000.0)
-        
-        with col2:
-            net_profit = st.number_input("Net Profit (₹)", value=0.0, step=10000.0)
-            total_liabilities = st.number_input("Total Liabilities (₹)", min_value=0.0, value=0.0, step=100000.0)
-            total_debt = st.number_input("Total Debt (₹)", min_value=0.0, value=0.0, step=100000.0)
-        
+    # Merchant Application Grid
+    st.markdown("### 📋 Merchant Application")
+    
+    st.markdown("#### 🏢 Company Information")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        company_name = st.text_input("Legal Business Name", placeholder="e.g., Acme Trading Pvt Ltd")
+        industry = st.selectbox("Industry", ["E-commerce", "SaaS/Software", "Professional Services", "Manufacturing", "Education", "Healthcare", "Travel", "Forex Trading", "MLM", "Other"])
+    with col2:
+        registration_number = st.text_input("Registration Number", placeholder="CIN (India) or UEN (Singapore)", help="Company Identification Number")
+        country = st.selectbox("Country of Operations", ["India", "Singapore", "UAE", "Other"])
+    with col3:
+        website = st.text_input("Company Website", placeholder="https://example.com")
         years_in_business = st.number_input("Years in Business", min_value=0, value=1, step=1)
         
-        credit_rating = st.selectbox(
-            "Credit Rating (if available)",
-            ["Not Available", "AAA", "AA", "A", "BBB", "BB", "B", "C", "D"]
-        )
+    col4, col5 = st.columns(2)
+    with col4:
+        directors_input = st.text_area("Director Names (one per line)", placeholder="John Doe\nJane Smith", height=68)
+    with col5:
+        business_description = st.text_area("What does the company do?", placeholder="Describe the business model, products/services offered...", height=68)
         
-        st.divider()
+    st.markdown("#### 💵 Financial Information (Optional)")
+    fcol1, fcol2, fcol3 = st.columns(3)
+    with fcol1:
+        revenue = st.number_input("Annual Revenue (₹)", min_value=0.0, value=0.0, step=100000.0)
+        net_profit = st.number_input("Net Profit (₹)", value=0.0, step=10000.0)
+    with fcol2:
+        total_assets = st.number_input("Total Assets (₹)", min_value=0.0, value=0.0, step=100000.0)
+        total_liabilities = st.number_input("Total Liabilities (₹)", min_value=0.0, value=0.0, step=100000.0)
+    with fcol3:
+        cash = st.number_input("Cash & Equivalents (₹)", min_value=0.0, value=0.0, step=10000.0)
+        total_debt = st.number_input("Total Debt (₹)", min_value=0.0, value=0.0, step=100000.0)
         
-        underwrite_button = st.button(
-            "🚀 Run Underwriting Assessment", 
-            type="primary", 
-            use_container_width=True
-        )
+    ccol1, ccol2, ccol3 = st.columns(3)
+    with ccol1:
+        credit_rating = st.selectbox("Credit Rating (if available)", ["Not Available", "AAA", "AA", "A", "BBB", "BB", "B", "C", "D"])
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    ucol1, ucol2, ucol3 = st.columns([1, 2, 1])
+    with ucol2:
+        underwrite_button = st.button("🚀 Run Underwriting Assessment", type="primary", use_container_width=True)
+        
+    st.markdown("---")
     
     # Main content area
     if underwrite_button:
@@ -291,7 +261,14 @@ def main():
                     agent_results = results.get("agent_results", {})
                     
                     for agent_name, agent_result in agent_results.items():
-                        agent_display_name = agent_name.replace("_", " ").title()
+                                                agent_display_names = {
+                            "red_flag": "Red Flag Detection Agent",
+                            "business_model": "Business Model Compliance Validation Agent",
+                            "financial_health": "Financial Health Assessment Agent",
+                            "sanctions": "Sanctions & Watchlist Screening Agent",
+                            "orchestrator": "Risk Assessment Brief Agent"
+                        }
+                        agent_display_name = agent_display_names.get(agent_name, agent_name.replace("_", " ").title())
                         risk_level = agent_result.get("risk_level", "UNKNOWN")
                         
                         risk_icon = {
@@ -315,10 +292,18 @@ def main():
                     # Risk scoring table
                     agent_results = results.get("agent_results", {})
                     
+                                        agent_display_names = {
+                        "red_flag": "Red Flag Detection Agent",
+                        "business_model": "Business Model Compliance Validation Agent",
+                        "financial_health": "Financial Health Assessment Agent",
+                        "sanctions": "Sanctions & Watchlist Screening Agent",
+                        "orchestrator": "Risk Assessment Brief Agent"
+                    }
+                    
                     risk_data = []
                     for agent_name, result in agent_results.items():
                         risk_data.append({
-                            "Agent": agent_name.replace("_", " ").title(),
+                            "Agent": agent_display_names.get(agent_name, agent_name.replace("_", " ").title()),
                             "Risk Level": result.get("risk_level", "UNKNOWN"),
                             "Status": "✅ Pass" if result.get("risk_level") in ["LOW", "CLEAN"] else 
                                      "⚠️ Review" if result.get("risk_level") == "MEDIUM" else
