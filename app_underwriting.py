@@ -93,12 +93,6 @@ def main():
     Automated merchant underwriting system that reduces manual review time by 80%.
     Built for internal risk & compliance teams at payment gateways and neo-banks.
     
-    **What it does:**
-    - 🚩 **Red Flag Detection Agent**: Scans negative news, identifies fraud, lawsuits, bankruptcy, and regulatory fines.
-    - 📋 **Business Model Compliance Validation Agent**: Verifies acceptable use policy and detects prohibited businesses.
-    - 💰 **Financial Health Assessment Agent**: Analyzes financial statements, liquidity, and credit risk.
-    - 🔍 **Sanctions & Watchlist Screening Agent**: Checks OFAC, UN, EU, RBI/MAS watchlists and identifies PEPs.
-    - ⚡ **Risk Assessment Brief Agent**: Synthesizes all findings into a final risk decision and confidence score.
     """)
     
     # Initialize session state
@@ -373,6 +367,39 @@ def main():
         
         with col1:
             st.markdown("""
+            ### 🤖 Specialized Agents
+            
+            **🚩 Red Flag Detection Agent**
+            - Scans negative news
+            - Identifies fraud, lawsuits
+            - Bankruptcy detection
+            - Regulatory fines
+            
+            **📋 Business Model Compliance Validation Agent**
+            - Acceptable Use Policy check
+            - Prohibited business detection
+            - Compliance verification
+            
+            **💰 Financial Health Assessment Agent**
+            - Financial statement analysis
+            - Liquidity assessment
+            - Credit risk evaluation
+            - Solvency metrics
+            
+            **🔍 Sanctions & Watchlist Screening Agent**
+            - OFAC, UN, EU screening
+            - RBI/MAS watchlists
+            - PEP identification
+            - AML/CFT compliance
+            
+            **⚡ Risk Assessment Brief Agent**
+            - Synthesizes all findings
+            - Generates final risk decision
+            - Calculates confidence score
+            """)
+        
+        with col2:
+            st.markdown("""
             ### 📊 Key Metrics
             
             **Time Reduction**: 80%
@@ -390,10 +417,7 @@ def main():
             
             **Throughput**: 10x
             - Process 20-30 merchants/day ➡️ 200-300/day
-            """)
             
-        with col2:
-            st.markdown("""
             ### 💼 Use Cases
             
             - Payment gateway onboarding
