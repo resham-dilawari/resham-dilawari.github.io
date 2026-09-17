@@ -419,7 +419,7 @@ def main():
         
         # Feature Comparison
         st.divider()
-        st.subheader("📋 Feature Comparison")
+        st.subheader("📋 Feature")
         
         comparison_data = {
             "Feature": [
