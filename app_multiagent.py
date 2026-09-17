@@ -215,22 +215,18 @@ def main():
             st.stop()
         
         # Show agent activation status
-        st.info("🤖 Initializing multi-agent system...")
-        
-        with st.spinner("🔄 Agents are analyzing... This may take 30-60 seconds"):
-            try:
-                # Fetch comprehensive data
-                with st.status("Fetching market data...") as status:
-                    st.write("📡 Downloading data from Yahoo Finance...")
-                    portfolio_data_list = FinancialDataProvider.get_portfolio_data(tickers)
-                    status.update(label="✅ Data fetched successfully!", state="complete")
+        try:
+            with st.status("🤖 Analyzing Portfolio... This may take 30-60 seconds", expanded=True) as status:
+                st.write("📊 Fetching market data from Yahoo Finance...")
+                portfolio_data_list = FinancialDataProvider.get_portfolio_data(tickers)
+                st.write("✅ Data fetched successfully!")
                 
                 # Prepare context for orchestrator
                 context = {
                     "request_type": "full_advisory" if analysis_mode == "Full Advisory"
                                   else "portfolio_analysis" if analysis_mode == "Portfolio Analysis Only"
                                   else "investment_suggestion",
-                    "portfolio_data": portfolio_data_list,  # full list, not just [0]
+                    "portfolio_data": portfolio_data_list,
                     "tickers": tickers,
                     "current_holdings": tickers,
                     "corpus": corpus,
@@ -239,38 +235,36 @@ def main():
                         "goals": investment_goals,
                         "preferences": preferences,
                         "market_cap_preference": market_cap_filter,
-                        "tax_bracket": "30%"  # Can be made configurable
+                        "tax_bracket": "30%"
                     },
                     "market_context": {
                         "general": "Indian equity markets, current conditions"
                     }
                 }
                 
-                # Run orchestrator
-                with st.status("🤖 Multi-agent system running...") as status:
-                    st.write("🎭 Orchestrator coordinating agents...")
-                    st.write("🔍 Fundamental Analysis Agent analyzing...")
-                    st.write("📈 Technical Analysis Agent working...")
-                    st.write("📰 Sentiment Analysis Agent processing news...")
-                    st.write("⚠️ Risk Assessment Agent calculating...")
-                    st.write("🎯 Optimizer Agent optimizing...")
-                    
-                    results = st.session_state.orchestrator.analyze(context)
-                    st.session_state.analysis_results = results
-                    st.session_state.execution_history.append({
-                        "timestamp": datetime.now().isoformat(),
-                        "mode": analysis_mode,
-                        "tickers": tickers
-                    })
-                    
-                    status.update(label="✅ Analysis complete!", state="complete")
-                    st.session_state.is_running_analysis = False
+                st.write("👨‍💼 Orchestrator coordinating specialized agents...")
+                st.write("📈 Fundamental Analysis Agent reviewing financials...")
+                st.write("📉 Technical Analysis Agent analyzing charts...")
+                st.write("📰 Sentiment Analysis Agent processing news...")
+                st.write("⚠️ Risk Assessment Agent calculating exposure...")
+                st.write("🎯 Optimizer Agent building recommendations...")
                 
-            except Exception as e:
-                st.error(f"❌ Error during analysis: {e}")
-                st.exception(e)
+                results = st.session_state.orchestrator.analyze(context)
+                st.session_state.analysis_results = results
+                st.session_state.execution_history.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "mode": analysis_mode,
+                    "tickers": tickers
+                })
+                
+                status.update(label="✅ Multi-Agent Analysis Complete!", state="complete", expanded=False)
                 st.session_state.is_running_analysis = False
-                st.stop()
+                
+        except Exception as e:
+            st.error(f"❌ Error during analysis: {e}")
+            st.exception(e)
+            st.session_state.is_running_analysis = False
+            st.stop()
     
     if st.session_state.get("analysis_results"):
         results = st.session_state.analysis_results
