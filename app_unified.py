@@ -511,17 +511,16 @@ def main():
         # Ensure query params reflect current page
         st.query_params["page"] = "aiportfolioadvisor"
         
-        # Breadcrumb navigation at top of sidebar
-        with st.sidebar:
-            # Clickable breadcrumb
-            breadcrumb_clicked = st.button("🏠 Home  /  📈 Stock Advisor", key="breadcrumb_stock", use_container_width=True)
-            
-            if breadcrumb_clicked:
-                st.session_state.selected_product = None
-                st.query_params["page"] = "home"
-                st.rerun()
-            
-            st.markdown("---")
+        # Breadcrumb navigation at top of main page
+        # Clickable breadcrumb
+        breadcrumb_clicked = st.button("🏠 Home  /  📈 Stock Advisor", key="breadcrumb_stock")
+        
+        if breadcrumb_clicked:
+            st.session_state.selected_product = None
+            st.query_params["page"] = "home"
+            st.rerun()
+        
+        st.markdown("---")
         
         # Import the stock advisor app
         import app_multiagent
@@ -532,17 +531,16 @@ def main():
         # Ensure query params reflect current page
         st.query_params["page"] = "merchantunderwriting"
         
-        # Breadcrumb navigation at top of sidebar  
-        with st.sidebar:
-            # Clickable breadcrumb
-            breadcrumb_clicked = st.button("🏠 Home  /  🏢 Merchant Underwriting", key="breadcrumb_underwrite", use_container_width=True)
-            
-            if breadcrumb_clicked:
-                st.session_state.selected_product = None
-                st.query_params["page"] = "home"
-                st.rerun()
-            
-            st.markdown("---")
+        # Breadcrumb navigation at top of main page  
+        # Clickable breadcrumb
+        breadcrumb_clicked = st.button("🏠 Home  /  🏢 Merchant Underwriting", key="breadcrumb_underwrite")
+        
+        if breadcrumb_clicked:
+            st.session_state.selected_product = None
+            st.query_params["page"] = "home"
+            st.rerun()
+        
+        st.markdown("---")
         
         # Import the underwriting app
         import app_underwriting
