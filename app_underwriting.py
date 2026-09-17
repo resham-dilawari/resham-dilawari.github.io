@@ -261,7 +261,7 @@ def main():
                     agent_results = results.get("agent_results", {})
                     
                     for agent_name, agent_result in agent_results.items():
-                                                agent_display_names = {
+                        agent_display_names = {
                             "red_flag": "Red Flag Detection Agent",
                             "business_model": "Business Model Compliance Validation Agent",
                             "financial_health": "Financial Health Assessment Agent",
@@ -292,7 +292,7 @@ def main():
                     # Risk scoring table
                     agent_results = results.get("agent_results", {})
                     
-                                        agent_display_names = {
+                    agent_display_names = {
                         "red_flag": "Red Flag Detection Agent",
                         "business_model": "Business Model Compliance Validation Agent",
                         "financial_health": "Financial Health Assessment Agent",
