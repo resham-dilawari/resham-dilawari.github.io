@@ -40,6 +40,11 @@ st.markdown("""
 # Custom CSS - Modern UI
 st.markdown("""
 <style>
+    /* Reduce top padding */
+    .block-container {
+        padding-top: 1rem !important;
+    }
+    
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -513,7 +518,7 @@ def main():
         
         # Breadcrumb navigation at top of main page
         # Clickable breadcrumb
-        breadcrumb_clicked = st.button("🏠 Home  /  📈 Stock Advisor", key="breadcrumb_stock")
+        breadcrumb_clicked = st.button("🏠 Home  /  📈 Stock Advisor", key="breadcrumb_stock", type="tertiary")
         
         if breadcrumb_clicked:
             st.session_state.selected_product = None
@@ -533,7 +538,7 @@ def main():
         
         # Breadcrumb navigation at top of main page  
         # Clickable breadcrumb
-        breadcrumb_clicked = st.button("🏠 Home  /  🏢 Merchant Underwriting", key="breadcrumb_underwrite")
+        breadcrumb_clicked = st.button("🏠 Home  /  🏢 Merchant Underwriting", key="breadcrumb_underwrite", type="tertiary")
         
         if breadcrumb_clicked:
             st.session_state.selected_product = None
