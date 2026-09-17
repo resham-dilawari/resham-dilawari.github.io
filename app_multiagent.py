@@ -385,7 +385,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
         
-        st.info("👈 Configure your portfolio in the sidebar and click 'Run Multi-Agent Analysis' to begin!")
+        st.info("Configure your portfolio above and click 'Run Multi-Agent Analysis' to begin!")
         
         # Show execution history if available
         if st.session_state.execution_history:
