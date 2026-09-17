@@ -107,25 +107,24 @@ def main():
     if not initialize_orchestrator():
         st.stop()
     
-    # Sidebar for configuration
-    with st.sidebar:
-        st.header("⚙️ Configuration")
-        
-        st.subheader("🎯 Analysis Mode")
+    # Configuration / Filters
+    st.markdown("### ⚙️ Configuration & Filters")
+    
+    # 1st Row
+    col1, col2, col3 = st.columns(3)
+    with col1:
         analysis_mode = st.selectbox(
-            "Select mode",
+            "Analysis Mode",
             ["Full Advisory", "Portfolio Analysis Only", "Investment Suggestions Only"],
             help="Full Advisory runs all agents for comprehensive analysis"
         )
-        
-        st.subheader("📊 Your Portfolio")
+    with col2:
         portfolio_input = st.text_input(
             "Enter Stock Tickers",
             placeholder="e.g. RELIANCE, TCS, INFY",
             help="Enter tickers separated by commas, spaces, or anything else."
         )
-        
-        st.subheader("💵 Investment Details")
+    with col3:
         corpus = st.number_input(
             "Available corpus (₹)",
             min_value=0.0,
@@ -133,21 +132,21 @@ def main():
             step=10000.0
         )
         
-        st.subheader("👤 Risk Profile")
+    # 2nd Row
+    col4, col5, col6 = st.columns(3)
+    with col4:
         risk_tolerance = st.select_slider(
             "Risk Tolerance",
             options=["Very Conservative", "Conservative", "Moderate", "Aggressive", "Very Aggressive"],
             value="Moderate"
         )
-        
-        st.subheader("🎯 Investment Goals")
+    with col5:
         investment_goals = st.multiselect(
-            "Select your goals",
+            "Investment Goals",
             ["Wealth Creation", "Regular Income", "Retirement Planning", "Tax Saving", "Short-term Gains"],
             default=["Wealth Creation"]
         )
-        
-        st.subheader("🔍 Filters")
+    with col6:
         market_cap_filter = st.multiselect(
             "Market Cap",
             ["Large Cap", "Mid Cap", "Small Cap", "Multi Cap"],
@@ -155,19 +154,25 @@ def main():
             help="Filter suggestions based on market capitalization"
         )
         
-        st.markdown("---")
-        
-        st.subheader("📝 Preferences")
+    # 3rd Row
+    col7, col8 = st.columns([2, 1])
+    with col7:
         preferences = st.text_area(
             "Additional preferences",
             placeholder="e.g., Focus on IT sector, prefer dividend stocks, ESG investing",
-            height=80
+            height=68
         )
-        
+    with col8:
+        st.markdown("<br>", unsafe_allow_html=True)
         analyze_button = st.button("🚀 Run Multi-Agent Analysis", type="primary", use_container_width=True)
-    
+        
+    st.markdown("---")
     # Main content area
     if analyze_button:
+        st.session_state.is_running_analysis = True
+        st.session_state.analysis_results = None
+        
+    if st.session_state.get("is_running_analysis"):
         # Parse portfolio tickers
         import re
         raw_tickers = [t.strip().upper() for t in re.split(r'[,\s\n]+', portfolio_input) if t.strip()]
@@ -185,14 +190,6 @@ def main():
         
         # Show agent activation status
         st.info("🤖 Initializing multi-agent system...")
-        
-        # Create tabs for different views
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📊 Executive Summary",
-            "🤖 Agent Insights",
-            "📈 Detailed Analysis",
-            "🔍 Execution Log"
-        ])
         
         with st.spinner("🔄 Agents are analyzing... This may take 30-60 seconds"):
             try:
@@ -241,76 +238,89 @@ def main():
                     })
                     
                     status.update(label="✅ Analysis complete!", state="complete")
-                
-                # Display results in tabs
-                with tab1:
-                    st.header("📊 Executive Summary")
-                    if "synthesis" in results:
-                        st.markdown(results["synthesis"])
-                    elif "final_synthesis" in results:
-                        st.markdown(results["final_synthesis"])
-                    else:
-                        st.info("No synthesis available")
-                
-                with tab2:
-                    st.header("🤖 Individual Agent Insights")
-                    
-                    agent_results = results.get("agent_results", {})
-                    
-                    for agent_name, agent_result in agent_results.items():
-                        with st.expander(f"🔍 {agent_name.upper()} Agent", expanded=False):
-                            if isinstance(agent_result, dict) and "analysis" in agent_result:
-                                st.markdown(agent_result["analysis"])
-                            else:
-                                st.write(agent_result)
-                
-                with tab3:
-                    st.header("📈 Detailed Analysis")
-                    
-                    # Show raw agent results
-                    if analysis_mode == "Full Advisory":
-                        st.subheader("Portfolio Analysis")
-                        if "portfolio_analysis" in results:
-                            st.json(results["portfolio_analysis"].get("agent_results", {}))
-                        
-                        st.subheader("Investment Suggestions")
-                        if "investment_suggestions" in results:
-                            st.json(results["investment_suggestions"].get("agent_results", {}))
-                    else:
-                        st.json(results)
-                
-                with tab4:
-                    st.header("🔍 Execution Log & Transparency")
-                    st.write("**Orchestrator Execution Log:**")
-                    
-                    if st.session_state.orchestrator:
-                        logs = st.session_state.orchestrator.get_execution_log()
-                        for log in logs:
-                            with st.expander(f"{log['action']} - {log['timestamp']}", expanded=False):
-                                st.json(log)
-                    
-                    st.write("**Agent Health Status:**")
-                    health = st.session_state.orchestrator.get_agent_health_status()
-                    st.json(health)
-                
-                # Success message
-                st.success("✅ Multi-agent analysis complete!")
-                
-                # Download report button
-                if st.button("📥 Download Full Report"):
-                    report_json = json.dumps(results, indent=2, default=str)
-                    st.download_button(
-                        label="Download JSON Report",
-                        data=report_json,
-                        file_name=f"portfolio_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                        mime="application/json"
-                    )
+                    st.session_state.is_running_analysis = False
                 
             except Exception as e:
                 st.error(f"❌ Error during analysis: {e}")
                 st.exception(e)
+                st.session_state.is_running_analysis = False
+                st.stop()
     
-    else:
+    if st.session_state.get("analysis_results"):
+        results = st.session_state.analysis_results
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Executive Summary",
+        "🤖 Agent Insights",
+        "📈 Detailed Analysis",
+        "🔍 Execution Log"
+    ])
+    
+    # Display results in tabs
+    with tab1:
+        st.header("📊 Executive Summary")
+        if "synthesis" in results:
+            st.markdown(results["synthesis"])
+        elif "final_synthesis" in results:
+            st.markdown(results["final_synthesis"])
+        else:
+            st.info("No synthesis available")
+    
+    with tab2:
+        st.header("🤖 Individual Agent Insights")
+        
+        agent_results = results.get("agent_results", {})
+        
+        for agent_name, agent_result in agent_results.items():
+            with st.expander(f"🔍 {agent_name.upper()} Agent", expanded=False):
+                if isinstance(agent_result, dict) and "analysis" in agent_result:
+                    st.markdown(agent_result["analysis"])
+                else:
+                    st.write(agent_result)
+    
+    with tab3:
+        st.header("📈 Detailed Analysis")
+        
+        # Show raw agent results
+        if analysis_mode == "Full Advisory":
+            st.subheader("Portfolio Analysis")
+            if "portfolio_analysis" in results:
+                st.json(results["portfolio_analysis"].get("agent_results", {}))
+            
+            st.subheader("Investment Suggestions")
+            if "investment_suggestions" in results:
+                st.json(results["investment_suggestions"].get("agent_results", {}))
+        else:
+            st.json(results)
+    
+    with tab4:
+        st.header("🔍 Execution Log & Transparency")
+        st.write("**Orchestrator Execution Log:**")
+        
+        if st.session_state.orchestrator:
+            logs = st.session_state.orchestrator.get_execution_log()
+            for log in logs:
+                with st.expander(f"{log['action']} - {log['timestamp']}", expanded=False):
+                    st.json(log)
+        
+        st.write("**Agent Health Status:**")
+        health = st.session_state.orchestrator.get_agent_health_status()
+        st.json(health)
+    
+    # Success message
+    st.success("✅ Multi-agent analysis complete!")
+    
+    # Download report button
+    if st.button("📥 Download Full Report"):
+        report_json = json.dumps(results, indent=2, default=str)
+        st.download_button(
+            label="Download JSON Report",
+            data=report_json,
+            file_name=f"portfolio_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
+        )
+    
+    elif not st.session_state.get("analysis_results"):
         # Show agent architecture
         st.header("🏗️ Multi-Agent System Architecture")
         
