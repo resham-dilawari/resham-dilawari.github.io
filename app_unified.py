@@ -517,15 +517,11 @@ def main():
         st.query_params["page"] = "aiportfolioadvisor"
         
         # Breadcrumb navigation at top of main page
-        # Clickable breadcrumb
-        breadcrumb_clicked = st.button("🏠 Home  /  📈 Stock Advisor", key="breadcrumb_stock", type="tertiary")
-        
-        if breadcrumb_clicked:
-            st.session_state.selected_product = None
-            st.query_params["page"] = "home"
-            st.rerun()
-        
-        st.markdown("---")
+        # Simple text breadcrumb
+        st.markdown(
+            '<div style="padding-bottom: 5px; font-size: 14px;"><a href="?page=home" style="text-decoration: none; color: #0066cc;">🏠 Home</a> &nbsp;/&nbsp; 📈 Stock Advisor</div>', 
+            unsafe_allow_html=True
+        )
         
         # Import the stock advisor app
         import app_multiagent
@@ -537,15 +533,11 @@ def main():
         st.query_params["page"] = "merchantunderwriting"
         
         # Breadcrumb navigation at top of main page  
-        # Clickable breadcrumb
-        breadcrumb_clicked = st.button("🏠 Home  /  🏢 Merchant Underwriting", key="breadcrumb_underwrite", type="tertiary")
-        
-        if breadcrumb_clicked:
-            st.session_state.selected_product = None
-            st.query_params["page"] = "home"
-            st.rerun()
-        
-        st.markdown("---")
+        # Simple text breadcrumb
+        st.markdown(
+            '<div style="padding-bottom: 5px; font-size: 14px;"><a href="?page=home" style="text-decoration: none; color: #0066cc;">🏠 Home</a> &nbsp;/&nbsp; 🏢 Merchant Underwriting</div>', 
+            unsafe_allow_html=True
+        )
         
         # Import the underwriting app
         import app_underwriting
