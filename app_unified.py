@@ -108,7 +108,7 @@ st.markdown("""
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, #667eea 0%, #9365c7 100%);
         opacity: 0;
         transition: opacity 0.3s ease;
     }
@@ -176,7 +176,7 @@ st.markdown("""
     /* Button styling */
     .stButton button {
         width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #667eea 0%, #9365c7 100%);
         color: white;
         border: none;
         padding: 14px 24px;
@@ -192,7 +192,7 @@ st.markdown("""
     .stButton button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        background: linear-gradient(135deg, #9365c7 0%, #667eea 100%);
     }
     
     /* Breadcrumb button styling */
@@ -235,7 +235,7 @@ st.markdown("""
         margin-top: 0px !important;
         margin-bottom: 10px !important;
         text-align: left !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #11998e 100%);
+        background: linear-gradient(135deg, #667eea 0%, #9365c7 50%, #11998e 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         display: inline-block;

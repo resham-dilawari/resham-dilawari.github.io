@@ -63,21 +63,36 @@ Always format your response in a clear, structured manner with:
         raise NotImplementedError("Each agent must implement its own analyze method")
     
     def generate_response(self, prompt: str, temperature: float = 0.7) -> str:
-        """Generate response using Gemini API."""
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config={
-                    "temperature": temperature,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                }
-            )
-            return response.text
-        except Exception as e:
-            self.log_action("error", {"message": str(e)})
-            return f"Error generating response: {e}"
+        """Generate response using Gemini API with retry logic for rate limits."""
+        import time
+        max_retries = 5
+        base_delay = 5
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config={
+                        "temperature": temperature,
+                        "top_p": 0.95,
+                        "top_k": 40,
+                    }
+                )
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "Quota exceeded" in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        logger.warning(f"Rate limit hit (429). Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                
+                logger.error(f"Error generating response: {e}")
+                return f"Error generating response: {e}"
+        
+        return "Error: Maximum retries reached due to rate limits."
     
     def get_execution_log(self) -> List[Dict[str, Any]]:
         """Return the agent's execution log."""

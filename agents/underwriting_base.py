@@ -52,22 +52,37 @@ Remember: You are an internal tool for risk analysts. Accuracy and auditability 
     
     def generate_response(self, prompt: str, temperature: float = 0.3) -> str:
         """
-        Generate a response using the LLM.
+        Generate a response using the LLM with retry logic.
         Lower temperature for factual accuracy in risk assessment.
         """
-        try:
-            full_prompt = f"{self.get_system_prompt()}\n\n{prompt}"
-            response = self.client.models.generate_content(
-                model='gemini-3.6-flash',
-                contents=full_prompt,
-                config={
-                    'temperature': temperature,
-                    'max_output_tokens': 2048,
-                }
-            )
-            return response.text
-        except Exception as e:
-            return f"Error generating response: {str(e)}"
+        import time
+        max_retries = 5
+        base_delay = 5
+        
+        full_prompt = f"{self.get_system_prompt()}\n\n{prompt}"
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.client.models.generate_content(
+                    model='gemini-3.6-flash',
+                    contents=full_prompt,
+                    config={
+                        'temperature': temperature,
+                        'max_output_tokens': 2048,
+                    }
+                )
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "Quota exceeded" in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"Rate limit hit. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                return f"Error generating response: {error_str}"
+                
+        return "Error: Maximum retries reached due to rate limits."
     
     def log_action(self, action: str, details: Dict[str, Any]):
         """Log an action for transparency and audit trail."""
