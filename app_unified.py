@@ -518,10 +518,9 @@ def main():
         
         # Breadcrumb navigation at top of main page
         # Simple text breadcrumb
-        st.markdown(
-            '<div style="padding-bottom: 5px; font-size: 14px;"><a href="?page=home" style="text-decoration: none; color: #0066cc;">🏠 Home</a> &nbsp;/&nbsp; 📈 Stock Advisor</div>', 
-            unsafe_allow_html=True
-        )
+        def go_home_sa():
+            st.query_params.clear()
+        st.button("🏠 Home  /  📈 Stock Advisor", type="tertiary", on_click=go_home_sa)
         
         # Import the stock advisor app
         import app_multiagent
@@ -534,10 +533,9 @@ def main():
         
         # Breadcrumb navigation at top of main page  
         # Simple text breadcrumb
-        st.markdown(
-            '<div style="padding-bottom: 5px; font-size: 14px;"><a href="?page=home" style="text-decoration: none; color: #0066cc;">🏠 Home</a> &nbsp;/&nbsp; 🏢 Merchant Underwriting</div>', 
-            unsafe_allow_html=True
-        )
+        def go_home_mu():
+            st.query_params.clear()
+        st.button("🏠 Home  /  ⚖️ Merchant Underwriting", type="tertiary", on_click=go_home_mu)
         
         # Import the underwriting app
         import app_underwriting
