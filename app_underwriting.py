@@ -94,11 +94,11 @@ def main():
     Built for internal risk & compliance teams at payment gateways and neo-banks.
     
     **What it does:**
-    - 🚨 Red flag detection (fraud, lawsuits, bankruptcy)
-    - 📋 Business model compliance checking
-    - 💰 Financial health assessment
-    - 🔍 Sanctions & watchlist screening
-    - ⚡ Risk assessment brief in <30 seconds
+    - 🚩 **Red Flag Detection Agent**: Scans negative news, identifies fraud, lawsuits, bankruptcy, and regulatory fines.
+    - 📋 **Business Model Compliance Validation Agent**: Verifies acceptable use policy and detects prohibited businesses.
+    - 💰 **Financial Health Assessment Agent**: Analyzes financial statements, liquidity, and credit risk.
+    - 🔍 **Sanctions & Watchlist Screening Agent**: Checks OFAC, UN, EU, RBI/MAS watchlists and identifies PEPs.
+    - ⚡ **Risk Assessment Brief Agent**: Synthesizes all findings into a final risk decision and confidence score.
     """)
     
     # Initialize session state
@@ -373,34 +373,6 @@ def main():
         
         with col1:
             st.markdown("""
-            ### 🤖 Specialized Agents
-            
-            **🚨 Red Flag Detection Agent**
-            - Scans negative news
-            - Identifies fraud, lawsuits
-            - Bankruptcy detection
-            - Regulatory fines
-            
-            **📋 Business Model Agent**
-            - Acceptable Use Policy check
-            - Prohibited business detection
-            - Compliance verification
-            
-            **💰 Financial Health Agent**
-            - Financial statement analysis
-            - Liquidity assessment
-            - Credit risk evaluation
-            - Solvency metrics
-            
-            **🔍 Sanctions & Watchlist Agent**
-            - OFAC, UN, EU screening
-            - RBI/MAS watchlists
-            - PEP identification
-            - AML/CFT compliance
-            """)
-        
-        with col2:
-            st.markdown("""
             ### 📊 Key Metrics
             
             **Time Reduction**: 80%
@@ -417,9 +389,12 @@ def main():
             - Regulatory compliant
             
             **Throughput**: 10x
-            - Process 20-30 merchants/day → 200-300/day
+            - Process 20-30 merchants/day ➡️ 200-300/day
+            """)
             
-            ### 🎯 Use Cases
+        with col2:
+            st.markdown("""
+            ### 💼 Use Cases
             
             - Payment gateway onboarding
             - Corporate credit lines
@@ -427,11 +402,11 @@ def main():
             - Merchant account screening
             """)
         
-        st.info("👈 Enter merchant details in the sidebar and click 'Run Underwriting Assessment' to begin!")
+        st.info("💡 Fill the merchant application above and click 'Run Underwriting Assessment' to begin!")
         
         # Show history
         if st.session_state.uw_history:
-            st.subheader("📜 Recent Assessments")
+            st.subheader("🕒 Recent Assessments")
             for i, hist in enumerate(reversed(st.session_state.uw_history[-5:])):
                 col1, col2, col3 = st.columns([2, 2, 1])
                 with col1:
@@ -441,7 +416,6 @@ def main():
                 with col3:
                     decision_icon = "✅" if hist['decision'] == "APPROVE" else "❌" if hist['decision'] == "REJECT" else "⚠️"
                     st.write(f"{decision_icon} {hist['decision']}")
-
 
 if __name__ == "__main__":
     main()
