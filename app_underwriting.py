@@ -360,6 +360,8 @@ def main():
                 st.exception(e)
     
     else:
+        st.info("💡 Fill the merchant application above and click 'Run Underwriting Assessment' to begin!")
+        
         # Show system overview
         st.header("🏗️ Underwriting System Architecture")
         
@@ -367,7 +369,7 @@ def main():
         
         with col1:
             st.markdown("""
-            ### 🤖 Specialized Agents
+            ### 🤖 What it does:
             
             **🚩 Red Flag Detection Agent**
             - Scans negative news
@@ -420,14 +422,12 @@ def main():
             
             ### 💼 Use Cases
             
-            - Payment gateway onboarding
-            - Corporate credit lines
-            - Neo-banking KYC/KYB
-            - Merchant account screening
+            - **Payment Gateway Onboarding**: Rapidly screen high-risk merchants and ensure AUP compliance before issuing processing accounts.
+            - **Corporate Credit Lines**: Assess financial health, liquidity, and solvency metrics for commercial lending decisions.
+            - **Neo-Banking KYC/KYB**: Automate Know-Your-Business checks, verify business models, and validate corporate entities.
+            - **Merchant Account Screening**: Continuously monitor existing portfolios for new sanctions, legal actions, or policy violations.
             """)
-        
-        st.info("💡 Fill the merchant application above and click 'Run Underwriting Assessment' to begin!")
-        
+            
         # Show history
         if st.session_state.uw_history:
             st.subheader("🕒 Recent Assessments")
