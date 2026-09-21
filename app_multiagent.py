@@ -24,27 +24,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state
-if 'orchestrator' not in st.session_state:
-    st.session_state.orchestrator = None
-if 'analysis_results' not in st.session_state:
-    st.session_state.analysis_results = None
-if 'execution_history' not in st.session_state:
-    st.session_state.execution_history = []
-if 'persona_detector' not in st.session_state:
-    st.session_state.persona_detector = PersonaDetector()
-if 'user_persona' not in st.session_state:
-    st.session_state.user_persona = None
-if 'persona_detected' not in st.session_state:
-    st.session_state.persona_detected = False
-if 'questionnaire_answers' not in st.session_state:
-    st.session_state.questionnaire_answers = {}
-if 'educational_mode' not in st.session_state:
-    st.session_state.educational_mode = False
-if 'show_advanced_analytics' not in st.session_state:
-    st.session_state.show_advanced_analytics = False
-if 'intent_key' not in st.session_state:
-    st.session_state.intent_key = "both"
+def init_session_state():
+    # Initialize session state
+    if 'orchestrator' not in st.session_state:
+        st.session_state.orchestrator = None
+    if 'analysis_results' not in st.session_state:
+        st.session_state.analysis_results = None
+    if 'execution_history' not in st.session_state:
+        st.session_state.execution_history = []
+    if 'persona_detector' not in st.session_state:
+        st.session_state.persona_detector = PersonaDetector()
+    if 'user_persona' not in st.session_state:
+        st.session_state.user_persona = None
+    if 'persona_detected' not in st.session_state:
+        st.session_state.persona_detected = False
+    if 'questionnaire_answers' not in st.session_state:
+        st.session_state.questionnaire_answers = {}
+    if 'educational_mode' not in st.session_state:
+        st.session_state.educational_mode = False
+    if 'show_advanced_analytics' not in st.session_state:
+        st.session_state.show_advanced_analytics = False
+    if 'intent_key' not in st.session_state:
+        st.session_state.intent_key = "both"
+
+init_session_state()
 
 
 @st.cache_resource
@@ -71,6 +74,7 @@ def initialize_orchestrator():
 
 def main():
     """Main application."""
+    init_session_state()
 
     # Title
     st.title("🤖 Multi-Agent AI Portfolio Advisor", anchor=False)
