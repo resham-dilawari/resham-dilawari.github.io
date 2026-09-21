@@ -1,6 +1,6 @@
 """
-Merchant Underwriting Application
-B2B Fintech - Automated KYC/KYB Risk Assessment
+Merchant Underwriting + Credit & Lending Application
+B2B Fintech — Automated KYC/KYB Risk Assessment and Business Credit Decisions
 """
 import streamlit as st
 import os
@@ -8,438 +8,733 @@ import json
 from datetime import datetime
 
 from agents.underwriting_orchestrator import UnderwritingOrchestrator
+from agents.credit_lending_orchestrator import CreditLendingOrchestrator
+from agents.loan_structuring_agent import LoanStructuringAgent
+
+
+# ── collateral options from the agent ──────────────────────────────────────
+COLLATERAL_OPTIONS = LoanStructuringAgent.collateral_type_options()
+COLLATERAL_KEY_MAP = {v: k for k, v in COLLATERAL_OPTIONS}
+
 
 def main():
-    """Merchant Underwriting Application."""
-    
-    # Add mobile responsive CSS
+    """Merchant Underwriting + Credit & Lending Application."""
+
+    # ── CSS ────────────────────────────────────────────────────────────────
     st.markdown("""
     <style>
-        /* Mobile Responsive Styles for Underwriting */
+        /* Mobile Responsive */
         @media only screen and (max-width: 768px) {
-            /* Stack columns */
-            .stColumn {
-                width: 100% !important;
-                flex: 100% !important;
-                max-width: 100% !important;
-            }
-            /* Adjust input fields */
-            .stTextInput input, .stTextArea textarea, .stSelectbox select {
-                font-size: 14px !important;
-            }
-            /* Full width buttons */
-            .stButton button {
-                width: 100%;
-                font-size: 14px !important;
-                padding: 10px !important;
-            }
-            /* Responsive headers */
-            h1 {
-                font-size: 24px !important;
-            }
-            h2 {
-                font-size: 20px !important;
-            }
-            h3 {
-                font-size: 18px !important;
-            }
-            /* Adjust metrics */
-            [data-testid="stMetricValue"] {
-                font-size: 20px !important;
-            }
-            [data-testid="stMetricLabel"] {
-                font-size: 13px !important;
-            }
-            /* Expanders */
-            .streamlit-expanderHeader {
-                font-size: 14px !important;
-            }
-            /* Adjust sidebar width on mobile */
-            section[data-testid="stSidebar"] {
-                width: 100% !important;
-            }
+            .stColumn { width: 100% !important; flex: 100% !important; max-width: 100% !important; }
+            .stTextInput input, .stTextArea textarea, .stSelectbox select { font-size: 14px !important; }
+            .stButton button { width: 100%; font-size: 14px !important; padding: 10px !important; }
+            h1 { font-size: 24px !important; }
+            h2 { font-size: 20px !important; }
+            h3 { font-size: 18px !important; }
+            [data-testid="stMetricValue"] { font-size: 20px !important; }
         }
-        
         @media only screen and (max-width: 480px) {
-            h1 {
-                font-size: 20px !important;
-            }
-            h2 {
-                font-size: 18px !important;
-            }
-            h3 {
-                font-size: 16px !important;
-            }
-            .stTextInput input, .stTextArea textarea {
-                font-size: 13px !important;
-            }
-            [data-testid="stMetricValue"] {
-                font-size: 18px !important;
-            }
-            /* Reduce padding */
-            .block-container {
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
+            h1 { font-size: 20px !important; }
+            [data-testid="stMetricValue"] { font-size: 18px !important; }
+            .block-container { padding-left: 1rem !important; padding-right: 1rem !important; }
+        }
+
+        /* Mode tiles */
+        .mode-tile {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom: 6px;
+            transition: all 0.2s ease;
+        }
+        .mode-tile.selected {
+            border-color: #11998e;
+            background: #f0faf8;
+            box-shadow: 0 4px 14px rgba(17,153,142,0.18);
+        }
+        .mode-icon { font-size: 26px; line-height: 1.2; flex-shrink: 0; margin-top: 2px; }
+        .mode-text-block { display: flex; flex-direction: column; }
+        .mode-title { font-size: 14px; font-weight: 700; color: #1a1a1a; line-height: 1.35; }
+        .mode-desc  { font-size: 12px; color: #666; margin-top: 3px; line-height: 1.4; }
+
+        /* Credit score badge */
+        .score-pill {
+            display: inline-block;
+            font-size: 28px;
+            font-weight: 800;
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-bottom: 4px;
+        }
+        .score-AAA, .score-AA, .score-A  { background:#d4edda; color:#155724; }
+        .score-BBB                        { background:#fff3cd; color:#856404; }
+        .score-BB,  .score-B              { background:#fde8d8; color:#7d3100; }
+        .score-C,   .score-D              { background:#f8d7da; color:#721c24; }
+
+        /* Section divider label */
+        .section-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 8px;
         }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Title
-    st.title("🏢 Merchant Underwriting & Risk Assessment", anchor=False)
-    st.markdown("""
-    **AI-Powered KYC/KYB Screening for B2B Fintech Platforms**
-    
-    Automated merchant underwriting system that reduces manual review time by 80%.
-    Built for internal risk & compliance teams at payment gateways and neo-banks.
-    
-    """)
-    
-    # Initialize session state
-    if 'uw_orchestrator' not in st.session_state:
-        st.session_state.uw_orchestrator = None
-    if 'uw_results' not in st.session_state:
-        st.session_state.uw_results = None
-    if 'uw_history' not in st.session_state:
-        st.session_state.uw_history = []
-    
-    # Initialize orchestrator
+
+    # ── Title ──────────────────────────────────────────────────────────────
+    st.title("🏢 B2B Risk & Credit Platform", anchor=False)
+    st.markdown(
+        "AI-powered merchant onboarding screening and business credit decisions "
+        "for B2B fintech teams.")
+
+    # ── Session state ──────────────────────────────────────────────────────
+    for key, default in [
+        ("uw_orchestrator",   None),
+        ("cl_orchestrator",   None),
+        ("uw_results",        None),
+        ("cl_results",        None),
+        ("uw_history",        []),
+        ("cl_history",        []),
+        ("b2b_mode",          "onboarding"),
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+    # ── Orchestrator init ──────────────────────────────────────────────────
     if st.session_state.uw_orchestrator is None:
         try:
             st.session_state.uw_orchestrator = UnderwritingOrchestrator()
         except Exception as e:
-            st.error(f"Failed to initialize underwriting system: {e}")
+            st.error(f"Failed to initialise underwriting system: {e}")
             st.stop()
-    
-    st.info("💡 Fill the merchant application below and click 'Run Underwriting Assessment' to begin!")
-    
-    # Merchant Application Grid
-    st.markdown("### 📋 Merchant Application")
-    
-    st.markdown("#### 🏢 Company Information")
+
+    if st.session_state.cl_orchestrator is None:
+        try:
+            st.session_state.cl_orchestrator = CreditLendingOrchestrator()
+        except Exception as e:
+            st.error(f"Failed to initialise credit & lending system: {e}")
+            st.stop()
+
+    # ════════════════════════════════════════════════════════════════════════
+    # MODE SELECTOR
+    # ════════════════════════════════════════════════════════════════════════
+    st.markdown("### What would you like to do?")
+
+    MODE_OPTIONS = [
+        {
+            "key": "onboarding",
+            "icon": "🏪",
+            "title": "Merchant Onboarding",
+            "desc": "KYC/KYB screening — approve or reject merchant applications "
+                    "for payment gateway or neo-banking onboarding",
+        },
+        {
+            "key": "credit",
+            "icon": "💳",
+            "title": "Credit & Lending",
+            "desc": "Business loan assessment — credit score, DSCR, collateral "
+                    "analysis, and full loan term structuring",
+        },
+    ]
+
+    mcol1, mcol2 = st.columns(2)
+    for col, opt in zip([mcol1, mcol2], MODE_OPTIONS):
+        with col:
+            is_sel = st.session_state.b2b_mode == opt["key"]
+            tile_cls = "mode-tile selected" if is_sel else "mode-tile"
+            st.markdown(
+                f"""<div class="{tile_cls}">
+                    <span class="mode-icon">{opt['icon']}</span>
+                    <div class="mode-text-block">
+                        <span class="mode-title">{opt['title']}</span>
+                        <span class="mode-desc">{opt['desc']}</span>
+                    </div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                "✔ Selected" if is_sel else "Select",
+                key=f"mode_btn_{opt['key']}",
+                use_container_width=True,
+                type="primary" if is_sel else "secondary",
+            ):
+                st.session_state.b2b_mode = opt["key"]
+                st.session_state.uw_results = None
+                st.session_state.cl_results = None
+                st.rerun()
+
+    mode = st.session_state.b2b_mode
+    st.markdown("---")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # SHARED FORM — Company + Financial
+    # ════════════════════════════════════════════════════════════════════════
+    st.markdown("### 📋 Company Information")
+
     col1, col2, col3 = st.columns(3)
     with col1:
         company_name = st.text_input("Legal Business Name", placeholder="e.g., Acme Trading Pvt Ltd")
-        industry = st.selectbox("Industry", ["E-commerce", "SaaS/Software", "Professional Services", "Manufacturing", "Education", "Healthcare", "Travel", "Forex Trading", "MLM", "Other"])
+        industry = st.selectbox("Industry", [
+            "E-commerce", "SaaS/Software", "Professional Services",
+            "Manufacturing", "Education", "Healthcare",
+            "Travel", "Forex Trading", "MLM", "Other"
+        ])
     with col2:
-        registration_number = st.text_input("Registration Number", placeholder="CIN (India) or UEN (Singapore)", help="Company Identification Number")
+        registration_number = st.text_input(
+            "Registration Number",
+            placeholder="CIN (India) or UEN (Singapore)",
+            help="Company Identification Number"
+        )
         country = st.selectbox("Country of Operations", ["India", "Singapore", "UAE", "Other"])
     with col3:
         website = st.text_input("Company Website", placeholder="https://example.com")
         years_in_business = st.number_input("Years in Business", min_value=0, value=1, step=1)
-        
+
     col4, col5 = st.columns(2)
     with col4:
-        directors_input = st.text_area("Director Names (one per line)", placeholder="John Doe\nJane Smith", height=68)
+        directors_input = st.text_area("Director Names (one per line)",
+                                       placeholder="John Doe\nJane Smith", height=68)
     with col5:
-        business_description = st.text_area("What does the company do?", placeholder="Describe the business model, products/services offered...", height=68)
-        
-    st.markdown("#### 💵 Financial Information (Optional)")
+        business_description = st.text_area(
+            "What does the company do?",
+            placeholder="Describe the business model, products/services offered…", height=68)
+
+    st.markdown("#### 💵 Financial Information")
     fcol1, fcol2, fcol3 = st.columns(3)
     with fcol1:
-        revenue = st.number_input("Annual Revenue (₹)", min_value=0.0, value=0.0, step=100000.0)
-        net_profit = st.number_input("Net Profit (₹)", value=0.0, step=10000.0)
+        revenue     = st.number_input("Annual Revenue (₹)",    min_value=0.0, value=0.0, step=100000.0)
+        net_profit  = st.number_input("Net Profit (₹)",                       value=0.0, step=10000.0)
     with fcol2:
-        total_assets = st.number_input("Total Assets (₹)", min_value=0.0, value=0.0, step=100000.0)
+        total_assets      = st.number_input("Total Assets (₹)",      min_value=0.0, value=0.0, step=100000.0)
         total_liabilities = st.number_input("Total Liabilities (₹)", min_value=0.0, value=0.0, step=100000.0)
     with fcol3:
-        cash = st.number_input("Cash & Equivalents (₹)", min_value=0.0, value=0.0, step=10000.0)
-        total_debt = st.number_input("Total Debt (₹)", min_value=0.0, value=0.0, step=100000.0)
-        
-    ccol1, ccol2, ccol3 = st.columns(3)
-    with ccol1:
-        credit_rating = st.selectbox("Credit Rating (if available)", ["Not Available", "AAA", "AA", "A", "BBB", "BB", "B", "C", "D"])
-        
+        cash       = st.number_input("Cash & Equivalents (₹)", min_value=0.0, value=0.0, step=10000.0)
+        total_debt = st.number_input("Total Debt (₹)",         min_value=0.0, value=0.0, step=100000.0)
+
+    rcol1, _, _ = st.columns(3)
+    with rcol1:
+        credit_rating = st.selectbox(
+            "External Credit Rating (if available)",
+            ["Not Available", "AAA", "AA", "A", "BBB", "BB", "B", "C", "D"]
+        )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # CREDIT & LENDING EXTRA FIELDS
+    # ════════════════════════════════════════════════════════════════════════
+    loan_amount_requested = 0.0
+    loan_purpose          = "Working Capital"
+    loan_tenure_months    = 24
+    collateral_type_key   = "none"
+    collateral_value      = 0.0
+
+    if mode == "credit":
+        st.markdown("---")
+        st.markdown("### 💳 Loan Request")
+
+        lc1, lc2, lc3 = st.columns(3)
+        with lc1:
+            loan_amount_requested = st.number_input(
+                "Loan Amount Requested (₹)",
+                min_value=0.0, value=1000000.0, step=100000.0
+            )
+        with lc2:
+            loan_purpose = st.selectbox("Loan Purpose", [
+                "Working Capital", "Equipment / Machinery",
+                "Business Expansion", "Trade Finance",
+                "Invoice Discounting", "Real Estate / Property",
+                "Other"
+            ])
+        with lc3:
+            loan_tenure_months = st.select_slider(
+                "Preferred Tenure (months)",
+                options=[6, 12, 18, 24, 36, 48, 60],
+                value=24
+            )
+
+        st.markdown("#### 🏠 Collateral")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            collateral_display_names = [v for _, v in COLLATERAL_OPTIONS]
+            collateral_display = st.selectbox("Collateral Type", collateral_display_names)
+            collateral_type_key = COLLATERAL_KEY_MAP.get(collateral_display, "none")
+        with cc2:
+            collateral_value = st.number_input(
+                "Collateral Estimated Value (₹)",
+                min_value=0.0, value=0.0, step=100000.0,
+                help="Gross market/book value before haircut"
+            )
+
+        # Show live haircut preview
+        if collateral_type_key != "none" and collateral_value > 0:
+            coll_info    = LoanStructuringAgent.COLLATERAL_TYPES[collateral_type_key]
+            effective    = collateral_value * coll_info["max_ltv"]
+            haircut_pct  = coll_info["haircut"] * 100
+            st.info(
+                f"**Haircut applied**: {haircut_pct:.0f}%  →  "
+                f"Effective collateral cover: **₹{effective:,.0f}**  |  "
+                f"_{coll_info['notes']}_"
+            )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # RUN BUTTON
+    # ════════════════════════════════════════════════════════════════════════
     st.markdown("<br>", unsafe_allow_html=True)
-    ucol1, ucol2, ucol3 = st.columns([1, 2, 1])
-    with ucol2:
-        underwrite_button = st.button("🚀 Run Underwriting Assessment", type="primary", use_container_width=True)
-        
+    btn_label = (
+        "🚀 Run Underwriting Assessment"
+        if mode == "onboarding"
+        else "🚀 Run Credit & Lending Assessment"
+    )
+    _, bcol, _ = st.columns([1, 2, 1])
+    with bcol:
+        run_button = st.button(btn_label, type="primary", use_container_width=True)
     st.markdown("---")
-    
-    # Main content area
-    if underwrite_button:
+
+    # ════════════════════════════════════════════════════════════════════════
+    # EXECUTION
+    # ════════════════════════════════════════════════════════════════════════
+    if run_button:
         if not company_name:
             st.warning("⚠️ Please enter company name to proceed.")
             st.stop()
-        
-        # Parse directors
+        if mode == "credit" and loan_amount_requested <= 0:
+            st.warning("⚠️ Please enter a loan amount > 0.")
+            st.stop()
+
         directors = [d.strip() for d in directors_input.split("\n") if d.strip()]
-        
-        # Prepare financial data
         financial_data = {}
         if revenue > 0:
             financial_data = {
-                "revenue": revenue,
-                "net_profit": net_profit,
-                "total_assets": total_assets,
+                "revenue":           revenue,
+                "net_profit":        net_profit,
+                "total_assets":      total_assets,
                 "total_liabilities": total_liabilities,
-                "cash": cash,
-                "total_debt": total_debt,
-                "total_equity": total_assets - total_liabilities if total_assets > total_liabilities else 0
+                "total_equity":      max(0.0, total_assets - total_liabilities),
+                "cash":              cash,
+                "total_debt":        total_debt,
             }
-        
-        # Prepare context
-        context = {
-            "company_name": company_name,
+
+        base_context = {
+            "company_name":        company_name,
             "registration_number": registration_number or "Not Provided",
-            "directors": directors,
+            "directors":           directors,
             "business_description": business_description or "Not provided",
-            "website": website or "Not provided",
-            "industry": industry,
-            "country": country,
-            "financial_data": financial_data,
-            "years_in_business": years_in_business,
-            "credit_rating": credit_rating if credit_rating != "Not Available" else None,
-            "simulated_news": []  # In production, would fetch real news
+            "website":             website or "Not provided",
+            "industry":            industry,
+            "country":             country,
+            "financial_data":      financial_data,
+            "years_in_business":   years_in_business,
+            "credit_rating":       credit_rating if credit_rating != "Not Available" else None,
+            "simulated_news":      [],
         }
-        
-        # Create tabs
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "🎯 Risk Assessment Brief",
-            "🤖 Agent Details",
-            "📊 Risk Breakdown",
-            "🔍 Audit Trail"
-        ])
-        
-        with st.spinner("🔄 Running underwriting assessment... "):
-            try:
-                # Run underwriting
-                results = st.session_state.uw_orchestrator.analyze(context)
-                st.session_state.uw_results = results
-                st.session_state.uw_history.append({
-                    "timestamp": datetime.now().isoformat(),
-                    "company": company_name,
-                    "decision": results.get("decision")
-                })
-                
-                # Display results in tabs
-                with tab1:
-                    st.header("🎯 Risk Assessment Brief")
-                    
-                    # Show decision badge
-                    decision = results.get("decision", "UNKNOWN")
-                    risk_level = results.get("overall_risk", "UNKNOWN")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        if decision == "APPROVE":
-                            st.success(f"✅ **Decision**: {decision}")
-                        elif decision == "REJECT":
-                            st.error(f"❌ **Decision**: {decision}")
-                        else:
-                            st.warning(f"⚠️ **Decision**: {decision}")
-                    
-                    with col2:
-                        risk_color = {
-                            "LOW": "🟢",
-                            "MEDIUM": "🟡",
-                            "HIGH": "🟠",
-                            "CRITICAL": "🔴"
-                        }.get(risk_level, "⚪")
-                        st.info(f"{risk_color} **Risk Level**: {risk_level}")
-                    
-                    with col3:
-                        st.metric("Assessment Time", "<30s")
-                    
-                    st.divider()
-                    
-                    # Show synthesis
-                    synthesis = results.get("synthesis", "")
-                    if synthesis:
-                        st.markdown(synthesis)
-                    else:
-                        st.info("No synthesis available")
-                
-                with tab2:
-                    st.header("🤖 Individual Agent Findings")
-                    
-                    agent_results = results.get("agent_results", {})
-                    
-                    for agent_name, agent_result in agent_results.items():
-                        agent_display_names = {
-                            "red_flag": "Red Flag Detection Agent",
-                            "business_model": "Business Model Compliance Validation Agent",
-                            "financial_health": "Financial Health Assessment Agent",
-                            "sanctions": "Sanctions & Watchlist Screening Agent",
-                            "orchestrator": "Risk Assessment Brief Agent"
-                        }
-                        agent_display_name = agent_display_names.get(agent_name, agent_name.replace("_", " ").title())
-                        risk_level = agent_result.get("risk_level", "UNKNOWN")
-                        
-                        risk_icon = {
-                            "LOW": "🟢",
-                            "CLEAN": "🟢",
-                            "MEDIUM": "🟡",
-                            "HIGH": "🟠",
-                            "CRITICAL": "🔴",
-                            "UNKNOWN": "⚪"
-                        }.get(risk_level, "⚪")
-                        
-                        with st.expander(f"{risk_icon} {agent_display_name} - Risk: {risk_level}", expanded=False):
-                            if isinstance(agent_result, dict) and "analysis" in agent_result:
-                                st.markdown(agent_result["analysis"])
-                            else:
-                                st.write(agent_result)
-                
-                with tab3:
-                    st.header("📊 Risk Score Breakdown")
-                    
-                    # Risk scoring table
-                    agent_results = results.get("agent_results", {})
-                    
-                    agent_display_names = {
-                        "red_flag": "Red Flag Detection Agent",
-                        "business_model": "Business Model Compliance Validation Agent",
-                        "financial_health": "Financial Health Assessment Agent",
-                        "sanctions": "Sanctions & Watchlist Screening Agent",
-                        "orchestrator": "Risk Assessment Brief Agent"
-                    }
-                    
-                    risk_data = []
-                    for agent_name, result in agent_results.items():
-                        risk_data.append({
-                            "Agent": agent_display_names.get(agent_name, agent_name.replace("_", " ").title()),
-                            "Risk Level": result.get("risk_level", "UNKNOWN"),
-                            "Status": "✅ Pass" if result.get("risk_level") in ["LOW", "CLEAN"] else 
-                                     "⚠️ Review" if result.get("risk_level") == "MEDIUM" else
-                                     "❌ Fail"
-                        })
-                    
-                    import pandas as pd
-                    df = pd.DataFrame(risk_data)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
-                    
-                    st.divider()
-                    
-                    # Overall metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Overall Risk", risk_level)
-                    
-                    with col2:
-                        agents_pass = sum(1 for r in agent_results.values() if r.get("risk_level") in ["LOW", "CLEAN"])
-                        st.metric("Agents Passed", f"{agents_pass}/{len(agent_results)}")
-                    
-                    with col3:
-                        critical_flags = sum(1 for r in agent_results.values() if r.get("risk_level") == "CRITICAL")
-                        st.metric("Critical Flags", critical_flags)
-                    
-                    with col4:
-                        confidence = "High" if risk_level in ["LOW", "CRITICAL"] else "Medium"
-                        st.metric("Confidence", confidence)
-                
-                with tab4:
-                    st.header("🔍 Audit Trail & Execution Log")
-                    st.write("**Orchestrator Execution Log:**")
-                    
-                    if st.session_state.uw_orchestrator:
-                        logs = st.session_state.uw_orchestrator.get_execution_log()
-                        for log in logs[-10:]:  # Show last 10 entries
-                            with st.expander(f"{log['action']} - {log['timestamp']}", expanded=False):
-                                st.json(log)
-                    
-                    st.write("**Agent Health Status:**")
-                    health = st.session_state.uw_orchestrator.get_agent_health_status()
-                    st.json(health)
-                
-                # Success message
-                st.success("✅ Underwriting assessment complete!")
-                
-                # Download report
-                if st.button("📥 Download Risk Assessment Report"):
-                    report_json = json.dumps(results, indent=2, default=str)
-                    st.download_button(
-                        label="Download JSON Report",
-                        data=report_json,
-                        file_name=f"underwriting_{company_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                        mime="application/json"
-                    )
-                
-            except Exception as e:
-                st.error(f"❌ Error during underwriting: {e}")
-                st.exception(e)
-    
+
+        if mode == "onboarding":
+            _run_onboarding(base_context)
+        else:
+            credit_context = {
+                **base_context,
+                "loan_amount_requested": loan_amount_requested,
+                "loan_purpose":          loan_purpose,
+                "loan_tenure_months":    loan_tenure_months,
+                "collateral_type":       collateral_type_key,
+                "collateral_value":      collateral_value,
+            }
+            _run_credit(credit_context)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # RESULTS DISPLAY
+    # ════════════════════════════════════════════════════════════════════════
+    if mode == "onboarding" and st.session_state.uw_results:
+        _show_onboarding_results(st.session_state.uw_results)
+
+    elif mode == "credit" and st.session_state.cl_results:
+        _show_credit_results(st.session_state.cl_results)
+
     else:
-        # Show system overview
-        st.header("🏗️ Underwriting System Architecture")
-        
+        _show_architecture(mode)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# EXECUTION HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _run_onboarding(context: dict):
+    with st.spinner("🔄 Running underwriting assessment…"):
+        try:
+            results = st.session_state.uw_orchestrator.analyze(context)
+            st.session_state.uw_results = results
+            st.session_state.uw_history.append({
+                "timestamp": datetime.now().isoformat(),
+                "company":   context["company_name"],
+                "decision":  results.get("decision"),
+            })
+        except Exception as e:
+            st.error(f"❌ Error during underwriting: {e}")
+            st.exception(e)
+
+
+def _run_credit(context: dict):
+    with st.status("💳 Running credit & lending assessment… (this may take 60–90 s)", expanded=True) as status:
+        try:
+            st.write("🔍 Phase 1: Red flag, sanctions & financial health screening…")
+            st.write("📐 Phase 2: Credit scoring & repayment capacity analysis…")
+            st.write("🏗️ Phase 3: Loan structuring & collateral assessment…")
+            st.write("📝 Phase 4: Synthesising credit memo…")
+            results = st.session_state.cl_orchestrator.analyze(context)
+            st.session_state.cl_results = results
+            st.session_state.cl_history.append({
+                "timestamp": datetime.now().isoformat(),
+                "company":   context["company_name"],
+                "decision":  results.get("decision"),
+            })
+            status.update(label="✅ Credit & Lending Assessment Complete!", state="complete", expanded=False)
+        except Exception as e:
+            st.error(f"❌ Error during credit assessment: {e}")
+            st.exception(e)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RESULTS — ONBOARDING
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _show_onboarding_results(results: dict):
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🎯 Risk Assessment Brief",
+        "🤖 Agent Details",
+        "📊 Risk Breakdown",
+        "🔍 Audit Trail"
+    ])
+
+    decision   = results.get("decision", "UNKNOWN")
+    risk_level = results.get("overall_risk", "UNKNOWN")
+
+    with tab1:
+        st.header("🎯 Risk Assessment Brief")
+        dc1, dc2, dc3 = st.columns(3)
+        with dc1:
+            if decision == "APPROVE":
+                st.success(f"✅ **Decision**: {decision}")
+            elif decision == "REJECT":
+                st.error(f"❌ **Decision**: {decision}")
+            else:
+                st.warning(f"⚠️ **Decision**: {decision}")
+        with dc2:
+            risk_icon = {"LOW": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}.get(risk_level, "⚪")
+            st.info(f"{risk_icon} **Risk Level**: {risk_level}")
+        with dc3:
+            st.metric("Assessment Time", "<30s")
+        st.divider()
+        synthesis = results.get("synthesis", "")
+        if synthesis:
+            st.markdown(synthesis)
+        else:
+            st.info("No synthesis available.")
+
+    with tab2:
+        st.header("🤖 Individual Agent Findings")
+        AGENT_NAMES = {
+            "red_flag":       "Red Flag Detection Agent",
+            "business_model": "Business Model Compliance Validation Agent",
+            "financial_health": "Financial Health Assessment Agent",
+            "sanctions":      "Sanctions & Watchlist Screening Agent",
+            "orchestrator":   "Risk Assessment Brief Agent",
+        }
+        for aname, ares in results.get("agent_results", {}).items():
+            rl = ares.get("risk_level", "UNKNOWN")
+            icon = {"LOW": "🟢", "CLEAN": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}.get(rl, "⚪")
+            display = AGENT_NAMES.get(aname, aname.replace("_", " ").title())
+            with st.expander(f"{icon} {display} — Risk: {rl}", expanded=False):
+                if isinstance(ares, dict) and "analysis" in ares:
+                    st.markdown(ares["analysis"])
+                else:
+                    st.write(ares)
+
+    with tab3:
+        st.header("📊 Risk Score Breakdown")
+        import pandas as pd
+        AGENT_NAMES = {
+            "red_flag":       "Red Flag Detection",
+            "business_model": "Business Model Compliance",
+            "financial_health": "Financial Health",
+            "sanctions":      "Sanctions & Watchlist",
+        }
+        rows = []
+        for aname, ares in results.get("agent_results", {}).items():
+            rl = ares.get("risk_level", "UNKNOWN")
+            rows.append({
+                "Agent":      AGENT_NAMES.get(aname, aname.replace("_", " ").title()),
+                "Risk Level": rl,
+                "Status":     "✅ Pass" if rl in ["LOW", "CLEAN"] else
+                              "⚠️ Review" if rl == "MEDIUM" else "❌ Fail"
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.divider()
+        mc1, mc2, mc3, mc4 = st.columns(4)
+        ar = results.get("agent_results", {})
+        with mc1: st.metric("Overall Risk", risk_level)
+        with mc2: st.metric("Agents Passed", f"{sum(1 for r in ar.values() if r.get('risk_level') in ['LOW','CLEAN'])}/{len(ar)}")
+        with mc3: st.metric("Critical Flags", sum(1 for r in ar.values() if r.get("risk_level") == "CRITICAL"))
+        with mc4: st.metric("Confidence", "High" if risk_level in ["LOW", "CRITICAL"] else "Medium")
+
+    with tab4:
+        _audit_trail_tab(st.session_state.uw_orchestrator)
+
+    st.success("✅ Underwriting assessment complete!")
+    _download_button(results, prefix="underwriting")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RESULTS — CREDIT & LENDING
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _show_credit_results(results: dict):
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "💳 Credit Memo",
+        "🤖 Agent Details",
+        "📊 Credit Scorecard",
+        "🔍 Audit Trail"
+    ])
+
+    decision    = results.get("decision", "UNKNOWN")
+    risk_level  = results.get("overall_risk", "UNKNOWN")
+    credit_score = results.get("credit_score")
+    credit_rating = results.get("credit_rating", "—")
+    dscr         = results.get("dscr")
+    rec_amount   = results.get("recommended_amount", 0)
+    rate         = results.get("interest_rate")
+    rate_band    = results.get("interest_rate_band", "—")
+    tenure       = results.get("tenure_months")
+
+    with tab1:
+        st.header("💳 Credit Memo")
+        # Decision banner
+        dc1, dc2, dc3, dc4 = st.columns(4)
+        with dc1:
+            if decision == "APPROVE":
+                st.success(f"✅ {decision}")
+            elif decision == "REJECT":
+                st.error(f"❌ {decision}")
+            else:
+                st.warning(f"⚠️ {decision.replace('_', ' ')}")
+        with dc2:
+            risk_icon = {"LOW": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}.get(risk_level, "⚪")
+            st.info(f"{risk_icon} Risk: **{risk_level}**")
+        with dc3:
+            if rec_amount:
+                st.metric("Recommended Amount", f"₹{rec_amount:,.0f}")
+        with dc4:
+            if rate:
+                st.metric("Interest Rate", f"{rate:.1f}%")
+        st.divider()
+        memo = results.get("credit_memo", "")
+        if memo:
+            st.markdown(memo)
+        else:
+            st.info("No credit memo generated.")
+
+    with tab2:
+        st.header("🤖 Agent Findings")
+        AGENT_DISPLAY = {
+            "red_flag":          "🚩 Red Flag Detection",
+            "sanctions":         "🔍 Sanctions & Watchlist",
+            "financial_health":  "💵 Financial Health",
+            "credit_scoring":    "💳 Credit Scoring",
+            "repayment_capacity": "📐 Repayment Capacity",
+            "loan_structuring":  "🏗️ Loan Structuring",
+        }
+        for aname, ares in results.get("agent_results", {}).items():
+            rl   = ares.get("risk_level", "UNKNOWN")
+            icon = {"LOW": "🟢", "CLEAN": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}.get(rl, "⚪")
+            display = AGENT_DISPLAY.get(aname, aname.replace("_", " ").title())
+            with st.expander(f"{icon} {display} — Risk: {rl}", expanded=False):
+                if isinstance(ares, dict) and "analysis" in ares:
+                    st.markdown(ares["analysis"])
+                else:
+                    st.write(ares)
+
+    with tab3:
+        st.header("📊 Credit Scorecard")
+
+        # Credit score visual
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        with sc1:
+            if credit_score is not None:
+                rating_css = f"score-{credit_rating}" if credit_rating in [
+                    "AAA","AA","A","BBB","BB","B","C","D"] else "score-BB"
+                st.markdown(
+                    f"<div style='text-align:center'>"
+                    f"<div class='score-pill {rating_css}'>{credit_score}/100</div>"
+                    f"<div style='font-size:13px;color:#555;margin-top:4px;'>Credit Score</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.metric("Credit Score", "—")
+        with sc2:
+            st.metric("Credit Rating", credit_rating or "—")
+        with sc3:
+            st.metric("DSCR", f"{dscr:.2f}" if dscr is not None else "—",
+                      help="≥ 1.25 is lender-acceptable. ≥ 1.5 is comfortable.")
+        with sc4:
+            st.metric("Rate Band", rate_band)
+
+        st.divider()
+
+        # Collateral breakdown
+        ctype    = results.get("collateral_type", "—")
+        ccover   = results.get("collateral_cover", 0)
+        cadequate = results.get("collateral_adequate", False)
+        cc1, cc2, cc3 = st.columns(3)
+        with cc1: st.metric("Collateral Type", ctype or "—")
+        with cc2: st.metric("Effective Cover (post-haircut)", f"₹{ccover:,.0f}" if ccover else "—")
+        with cc3: st.metric("Collateral Adequate", "✅ Yes" if cadequate else "❌ No")
+
+        st.divider()
+
+        # Agent risk summary table
+        import pandas as pd
+        AGENT_DISPLAY = {
+            "red_flag":           "Red Flag Detection",
+            "sanctions":          "Sanctions & Watchlist",
+            "financial_health":   "Financial Health",
+            "credit_scoring":     "Credit Scoring",
+            "repayment_capacity": "Repayment Capacity",
+            "loan_structuring":   "Loan Structuring",
+        }
+        rows = []
+        for aname, ares in results.get("agent_results", {}).items():
+            rl = ares.get("risk_level", "UNKNOWN")
+            rows.append({
+                "Agent":      AGENT_DISPLAY.get(aname, aname.replace("_", " ").title()),
+                "Risk Level": rl,
+                "Status":     "✅ Pass" if rl in ["LOW","CLEAN"] else
+                              "⚠️ Review" if rl == "MEDIUM" else "❌ Fail"
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    with tab4:
+        _audit_trail_tab(st.session_state.cl_orchestrator)
+
+    st.success("✅ Credit & lending assessment complete!")
+    _download_button(results, prefix=f"credit_{results.get('decision','UNKNOWN')}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SHARED HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _audit_trail_tab(orchestrator):
+    st.header("🔍 Audit Trail & Execution Log")
+    st.write("**Orchestrator Execution Log:**")
+    if orchestrator:
+        for log in orchestrator.get_execution_log()[-15:]:
+            with st.expander(f"{log['action']} — {log['timestamp']}", expanded=False):
+                st.json(log)
+    st.write("**Agent Health Status:**")
+    if orchestrator:
+        st.json(orchestrator.get_agent_health_status())
+
+
+def _download_button(results: dict, prefix: str):
+    if st.button("📥 Download Full Report"):
+        data = json.dumps(results, indent=2, default=str)
+        ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+        st.download_button(
+            label="Download JSON Report",
+            data=data,
+            file_name=f"{prefix}_{ts}.json",
+            mime="application/json"
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ARCHITECTURE OVERVIEW (shown before first run)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _show_architecture(mode: str):
+    if mode == "onboarding":
+        st.header("🏗️ Merchant Onboarding System Architecture")
         col1, col2 = st.columns(2)
-        
         with col1:
             st.markdown("""
-            ### 🤖 What it does:
-            
-            **🚩 Red Flag Detection Agent**
-            - Scans negative news
-            - Identifies fraud, lawsuits
-            - Bankruptcy detection
-            - Regulatory fines
-            
-            **📋 Business Model Compliance Validation Agent**
-            - Acceptable Use Policy check
-            - Prohibited business detection
-            - Compliance verification
-            
-            **💰 Financial Health Assessment Agent**
-            - Financial statement analysis
-            - Liquidity assessment
-            - Credit risk evaluation
-            - Solvency metrics
-            
-            **🔍 Sanctions & Watchlist Screening Agent**
-            - OFAC, UN, EU screening
-            - RBI/MAS watchlists
-            - PEP identification
-            - AML/CFT compliance
-            
-            **⚡ Risk Assessment Brief Agent**
-            - Synthesizes all findings
-            - Generates final risk decision
-            - Calculates confidence score
-            """)
-        
+### 🤖 Agents
+**🚩 Red Flag Detection Agent**
+- Scans negative news, fraud, lawsuits, bankruptcy
+- Regulatory fines, license revocations
+
+**📋 Business Model Compliance Agent**
+- Acceptable Use Policy check
+- Prohibited business detection
+
+**💰 Financial Health Assessment Agent**
+- Liquidity, solvency, profitability ratios
+- Credit risk evaluation
+
+**🔍 Sanctions & Watchlist Screening Agent**
+- OFAC, UN, EU, RBI/MAS watchlists
+- PEP identification, AML/CFT compliance
+""")
         with col2:
             st.markdown("""
-            ### 📊 Key Metrics
-            
-            **Time Reduction**: 80%
-            - Manual: 45 mins per merchant
-            - Automated: <30 seconds
-            
-            **False Negative Rate**: <1%
-            - Catches 99%+ of red flags
-            - Human parity maintained
-            
-            **Audit Trail**: 100%
-            - All sources cited
-            - 7-year retention
-            - Regulatory compliant
-            
-            **Throughput**: 10x
-            - Process 20-30 merchants/day ➡️ 200-300/day
-            
-            ### 💼 Use Cases
-            
-            - **Payment Gateway Onboarding**: Rapidly screen high-risk merchants and ensure Acceptable Use Policy (AUP) compliance before issuing processing accounts.
-            - **Corporate Credit Lines**: Assess financial health, liquidity, and solvency metrics for commercial lending decisions.
-            - **Neo-Banking KYC/KYB**: Automate Know Your Customer / Know Your Business (KYC/KYB) checks, verify business models, and validate corporate entities.
-            - **Merchant Account Screening**: Continuously monitor existing portfolios for new sanctions, legal actions, or policy violations.
-            """)
-            
-        # Show history
-        if st.session_state.uw_history:
-            st.subheader("🕒 Recent Assessments")
-            for i, hist in enumerate(reversed(st.session_state.uw_history[-5:])):
-                col1, col2, col3 = st.columns([2, 2, 1])
-                with col1:
-                    st.write(f"**{hist['company']}**")
-                with col2:
-                    st.write(f"{hist['timestamp']}")
-                with col3:
-                    decision_icon = "✅" if hist['decision'] == "APPROVE" else "❌" if hist['decision'] == "REJECT" else "⚠️"
-                    st.write(f"{decision_icon} {hist['decision']}")
+### 📊 Key Metrics
+- **Time Reduction**: 80% (45 min → <30 sec)
+- **False Negative Rate**: <1%
+- **Audit Trail**: 100% — 7-year retention
+- **Throughput**: 10× increase
+
+### 💼 Decision Outputs
+- APPROVE
+- APPROVE WITH CONDITIONS
+- REQUEST MORE INFO
+- REJECT
+""")
+
+    else:
+        st.header("🏗️ Credit & Lending System Architecture")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+### 🤖 Agents (6 total, 3 phases)
+
+**Phase 1 (parallel)**
+- 🚩 Red Flag Detection
+- 🔍 Sanctions & Watchlist Screening
+- 💵 Financial Health Assessment
+
+**Phase 2 (parallel)**
+- 💳 Credit Scoring (0–100 + AAA–D rating)
+- 📐 Repayment Capacity (DSCR + stress test)
+
+**Phase 3**
+- 🏗️ Loan Structuring (terms, covenants, collateral)
+""")
+        with col2:
+            st.markdown("""
+### 📊 Credit Outputs
+- Credit Score (0–100) & Rating (AAA–D)
+- DSCR with −20% revenue stress test
+- Collateral adequacy by type (type-specific haircuts)
+- Recommended loan amount & interest rate band
+- Tenure options with EMI comparison
+- Loan covenants & pre-disbursement checklist
+- Full Credit Memo for credit committee
+
+### 🏠 Collateral Haircuts
+| Type | Haircut | Max LTV |
+|------|---------|---------|
+| Real Estate | 35% | 65% |
+| Machinery | 45% | 55% |
+| Invoice / Receivables | 25% | 75% |
+| FD / Securities | 10% | 90% |
+| Unsecured | — | — |
+""")
+
 
 if __name__ == "__main__":
     main()

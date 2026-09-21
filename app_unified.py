@@ -396,23 +396,23 @@ def main():
         with col2:
             st.markdown("""
             <div class="product-card product-card-green">
-                <span class="product-icon">🏪</span>
-                <div class="product-title">Merchant Underwriting</div>
+                <span class="product-icon">🏦</span>
+                <div class="product-title">B2B Risk & Credit</div>
                 <div class="product-desc">
-                    Automated KYC/KYB risk assessment for B2B fintech platforms.
-                    Screen merchants for fraud, AML, and credit risks in seconds.
+                    Merchant onboarding KYC/KYB screening <em>and</em> business
+                    credit &amp; lending decisions — two tools, one platform.
                 </div>
                 <div class="product-stats">
-                    <div>Red flag detection</div>
-                    <div>Regulatory checks</div>
-                    <div>Financial health analysis</div>
-                    <div>Sanctions screening</div>
-                    <div>80% time reduction</div>
+                    <div>Merchant onboarding (KYC/KYB)</div>
+                    <div>Red flag &amp; sanctions screening</div>
+                    <div>Credit score (0–100, AAA–D)</div>
+                    <div>DSCR &amp; repayment capacity</div>
+                    <div>Type-specific collateral &amp; loan structuring</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button("🚀 Launch Merchant Underwriting", key="underwrite_btn", use_container_width=True):
+            if st.button("🚀 Launch B2B Risk & Credit", key="underwrite_btn", use_container_width=True):
                 st.session_state.selected_product = "underwriting"
                 st.query_params["page"] = "merchantunderwriting"
                 st.rerun()
@@ -421,39 +421,6 @@ def main():
         st.divider()
         st.subheader("📋 Feature")
         
-        comparison_data = {
-            "Feature": [
-                "Target User",
-                "Industry",
-                "Use Case",
-                "Asset Coverage",
-                "Analysis Time",
-                "Key Output",
-                "Agents",
-                "Data Sources"
-            ],
-            "Stock Advisor": [
-                "Retail Investors",
-                "WealthTech",
-                "Stock research & risk analytics",
-                "Equities/Stocks only (NSE/BSE)",
-                "<60 seconds",
-                "BUY/HOLD/SELL recommendations",
-                "8 specialized agents",
-                "Stock data, news, financials"
-            ],
-            "Merchant Underwriting": [
-                "Risk Analysts (Internal)",
-                "B2B Fintech",
-                "Merchant KYC/KYB screening",
-                "Business entities",
-                "<30 seconds",
-                "Risk Assessment Brief",
-                "5 specialized agents",
-                "News, registries, watchlists"
-            ]
-        }
-        
         # Render as HTML table with explicit inline styles
         html_table = """
         <table style="width: 100%; border-collapse: collapse; background: white;">
@@ -461,14 +428,14 @@ def main():
                 <tr style="background: #f8f9fa;">
                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e8e8e8; color: #1a1a1a; font-weight: 600;">Feature</th>
                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e8e8e8; color: #1a1a1a; font-weight: 600;">Stock Advisor</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e8e8e8; color: #1a1a1a; font-weight: 600;">Merchant Underwriting</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e8e8e8; color: #1a1a1a; font-weight: 600;">B2B Risk &amp; Credit</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Target User</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Retail Investors</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Risk Analysts (Internal)</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Risk &amp; Credit Analysts (Internal)</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Industry</td>
@@ -477,33 +444,33 @@ def main():
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Use Case</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Stock research & risk analytics</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Merchant KYC/KYB screening</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Stock research &amp; risk analytics</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Merchant KYC/KYB onboarding + Business credit &amp; lending</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Asset Coverage</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Equities/Stocks only (NSE/BSE)</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Business entities</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Business entities (any industry)</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Analysis Time</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">&lt;60 seconds</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">&lt;30 seconds</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">&lt;30 s (onboarding) / &lt;90 s (credit)</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Key Output</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">BUY/HOLD/SELL recommendations</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Risk Assessment Brief</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Risk Brief (onboarding) / Credit Memo + Loan Terms (lending)</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Agents</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">8 specialized agents</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">5 specialized agents</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">4 agents (onboarding) / 6 agents in 3 phases (credit)</td>
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Data Sources</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Stock data, news, financials</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">News, registries, watchlists</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">News, registries, watchlists, financial statements</td>
                 </tr>
             </tbody>
         </table>
