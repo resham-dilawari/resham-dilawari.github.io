@@ -19,6 +19,12 @@ COLLATERAL_KEY_MAP = {v: k for k, v in COLLATERAL_OPTIONS}
 
 def main():
     """Merchant Underwriting + Credit & Lending Application."""
+    
+    # Check open recommendations
+    if "lending_perf_checked" not in st.session_state:
+        import performance_tracker
+        performance_tracker.update_lending_recommendations()
+        st.session_state.lending_perf_checked = True
 
     # ── CSS ────────────────────────────────────────────────────────────────
     st.markdown("""
@@ -103,6 +109,10 @@ def main():
         ("uw_history",        []),
         ("cl_history",        []),
         ("b2b_mode",          "onboarding"),
+        ("lending_chat_id",   None),
+        ("lending_agent",     None),
+        ("lending_messages",  []),
+        ("lending_logger",    None),
     ]:
         if key not in st.session_state:
             st.session_state[key] = default
@@ -394,9 +404,45 @@ def _run_credit(context: dict):
                 "decision":  results.get("decision"),
             })
             status.update(label="✅ Credit & Lending Assessment Complete!", state="complete", expanded=False)
+            _init_lending_chat(context, results)
         except Exception as e:
             st.error(f"❌ Error during credit assessment: {e}")
             st.exception(e)
+
+def _init_lending_chat(context: dict, results: dict):
+    import uuid
+    from memory_store import MemoryStore
+    from lending_agent_core import LendingAgent
+    from lending_recommendation_logger import LendingRecommendationLogger
+    
+    chat_id = str(uuid.uuid4())
+    st.session_state.lending_chat_id = chat_id
+    st.session_state.lending_messages = []
+    
+    mem = MemoryStore()
+    mem.create_lending_session(chat_id, context["company_name"], context, results)
+    
+    track_stats = mem.get_lending_track_record()
+    track_text = None
+    if track_stats["total_resolved"] > 0:
+        track_text = f"Accuracy: {track_stats['accuracy']}% ({track_stats['stats']['WINNING']} SUCCESS, {track_stats['stats']['LOSING']} DEFAULTED)."
+        
+    st.session_state.lending_logger = LendingRecommendationLogger(
+        chat_id, context["company_name"], results.get("credit_score")
+    )
+    
+    agent = LendingAgent()
+    st.session_state.lending_agent = agent
+    
+    opening_text = ""
+    for event in agent.initialize(context["company_name"], context, results, chat_id, track_text):
+        if event[0] == "TEXT":
+            opening_text = event[1]
+            
+    st.session_state.lending_messages.append({
+        "role": "assistant",
+        "content": opening_text
+    })
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -494,11 +540,12 @@ def _show_onboarding_results(results: dict):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _show_credit_results(results: dict):
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "💳 Credit Memo",
         "🤖 Agent Details",
         "📊 Credit Scorecard",
-        "🔍 Audit Trail"
+        "🔍 Audit Trail",
+        "💬 AI Loan Advisor"
     ])
 
     decision    = results.get("decision", "UNKNOWN")
@@ -620,6 +667,39 @@ def _show_credit_results(results: dict):
 
     with tab4:
         _audit_trail_tab(st.session_state.cl_orchestrator)
+
+    with tab5:
+        st.header("💬 AI Loan Advisor Chat")
+        st.markdown("Discuss the credit memo, ask for term adjustments, or finalize the loan decision.")
+        
+        # Display chat history
+        for msg in st.session_state.lending_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                
+        # Chat input
+        if prompt := st.chat_input("Ask a question or finalize terms..."):
+            st.session_state.lending_messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+                
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing..."):
+                    agent = st.session_state.lending_agent
+                    response_text = ""
+                    for event in agent.chat_turn(prompt):
+                        if event[0] == "TEXT":
+                            response_text += event[1]
+                    
+                    if st.session_state.lending_logger:
+                        clean_text, recs = st.session_state.lending_logger.process(response_text)
+                        st.markdown(clean_text)
+                        for r in recs:
+                            st.success(f"📌 Logged final credit decision: {r.get('ACTION', 'UNKNOWN')} for {r.get('AMOUNT', 'N/A')}")
+                    else:
+                        st.markdown(response_text)
+                        
+            st.session_state.lending_messages.append({"role": "assistant", "content": response_text})
 
     st.success("✅ Credit & lending assessment complete!")
     _download_button(results, prefix=f"credit_{results.get('decision','UNKNOWN')}")

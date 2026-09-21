@@ -103,6 +103,44 @@ class MemoryStore:
         FOREIGN KEY (rec_id) REFERENCES recommendations(id),
         FOREIGN KEY (user_id) REFERENCES sessions(session_id)
     );
+
+    CREATE TABLE IF NOT EXISTS lending_chat_sessions (
+        chat_id       TEXT PRIMARY KEY,
+        merchant_name TEXT NOT NULL,
+        industry      TEXT,
+        revenue       REAL,
+        started_at    TEXT,
+        form_data     TEXT,
+        orchestrator_results TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS lending_recommendations (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id           TEXT NOT NULL,
+        merchant_name     TEXT,
+        decision          TEXT,
+        credit_score      REAL,
+        rec_amount        REAL,
+        interest_rate     REAL,
+        rationale         TEXT,
+        risk_note         TEXT,
+        created_at        TEXT,
+        last_checked_at   TEXT,
+        current_credit_score REAL,
+        performance       TEXT,
+        agent_analysis    TEXT,
+        agent_analysed_at TEXT,
+        FOREIGN KEY (chat_id) REFERENCES lending_chat_sessions(chat_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS lending_rec_feedback (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        rec_id      INTEGER NOT NULL,
+        rating      TEXT, -- GOOD / BAD / PARTIAL
+        note        TEXT,
+        created_at  TEXT,
+        FOREIGN KEY (rec_id) REFERENCES lending_recommendations(id)
+    );
     """
 
     def __init__(self, db_path: str = "memory_store.db"):
@@ -386,6 +424,93 @@ class MemoryStore:
     def get_user_track_record(self, user_id: str) -> Dict[str, Any]:
         with self._conn() as conn:
             rows = conn.execute("SELECT performance, COUNT(*) as cnt FROM recommendations WHERE user_id = ? GROUP BY performance", (user_id,)).fetchall()
+            stats = {"WINNING": 0, "LOSING": 0, "NEUTRAL": 0, "PENDING": 0, "EXPIRED": 0}
+            total_resolved = 0
+            for r in rows:
+                p = r["performance"]
+                c = r["cnt"]
+                if p in stats:
+                    stats[p] = c
+                if p in ["WINNING", "LOSING", "NEUTRAL"]:
+                    total_resolved += c
+            
+            accuracy = 0
+            if total_resolved > 0:
+                accuracy = round((stats["WINNING"] / total_resolved) * 100)
+            
+            return {
+                "stats": stats,
+                "total_resolved": total_resolved,
+                "accuracy": accuracy
+            }
+
+    # ── Lending Chat Sessions & Recommendations ─────────────────────────────
+
+    def create_lending_session(self, chat_id: str, merchant_name: str, form_data: dict, orchestrator_results: dict):
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO lending_chat_sessions (chat_id, merchant_name, industry, revenue, started_at, form_data, orchestrator_results)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (chat_id, merchant_name, form_data.get("industry"), form_data.get("annual_revenue"), datetime.now().isoformat(), json.dumps(form_data), json.dumps(orchestrator_results))
+            )
+
+    def save_lending_recommendation(self, chat_id: str, merchant_name: str, rec: dict, credit_score: float = None) -> int:
+        with self._conn() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO lending_recommendations (
+                    chat_id, merchant_name, decision, credit_score, rec_amount, interest_rate, rationale, risk_note, created_at, performance
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+                """,
+                (
+                    chat_id, merchant_name, rec.get("ACTION"), credit_score, 
+                    self._parse_price(rec.get("AMOUNT")), self._parse_price(rec.get("RATE")), 
+                    rec.get("RATIONALE"), rec.get("RISK"), datetime.now().isoformat()
+                )
+            )
+            return cur.lastrowid
+
+    def add_lending_feedback(self, rec_id: int, rating: str, note: str):
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT INTO lending_rec_feedback (rec_id, rating, note, created_at) VALUES (?, ?, ?, ?)",
+                (rec_id, rating, note, datetime.now().isoformat())
+            )
+            # Instantly update performance based on manual feedback (simulating actual loan outcome)
+            perf = "WINNING" if rating == "GOOD" else "LOSING" if rating == "BAD" else "NEUTRAL"
+            conn.execute("UPDATE lending_recommendations SET performance = ? WHERE id = ?", (perf, rec_id))
+
+    def get_all_lending_sessions(self) -> List[Dict]:
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM lending_chat_sessions ORDER BY started_at DESC").fetchall()
+            return [dict(r) for r in rows]
+
+    def get_lending_recommendations(self, chat_id: str) -> List[Dict]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT r.*, 
+                       (SELECT rating FROM lending_rec_feedback f WHERE f.rec_id = r.id ORDER BY created_at DESC LIMIT 1) as latest_feedback
+                FROM lending_recommendations r 
+                WHERE chat_id = ? ORDER BY created_at ASC
+                """, (chat_id,)
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_open_lending_recommendations(self) -> List[Dict]:
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM lending_recommendations WHERE performance = 'PENDING'").fetchall()
+            return [dict(r) for r in rows]
+            
+    def update_lending_analysis(self, rec_id: int, agent_analysis: str):
+        with self._conn() as conn:
+            conn.execute("UPDATE lending_recommendations SET agent_analysis = ?, agent_analysed_at = ? WHERE id = ?", (agent_analysis, datetime.now().isoformat(), rec_id))
+
+    def get_lending_track_record(self) -> Dict[str, Any]:
+        with self._conn() as conn:
+            rows = conn.execute("SELECT performance, COUNT(*) as cnt FROM lending_recommendations GROUP BY performance").fetchall()
             stats = {"WINNING": 0, "LOSING": 0, "NEUTRAL": 0, "PENDING": 0, "EXPIRED": 0}
             total_resolved = 0
             for r in rows:

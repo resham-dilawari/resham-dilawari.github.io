@@ -133,3 +133,95 @@ def _generate_self_analysis(rec: dict, current_price: float, change_pct: float, 
         config=types.GenerateContentConfig(temperature=0.4)
     )
     return response.text.strip()
+
+def update_lending_recommendations():
+    """
+    Simulates a credit bureau check for open lending recommendations 
+    and updates performance/generates self-analysis.
+    """
+    from memory_store import MemoryStore
+    import random
+    
+    mem = MemoryStore()
+    recs = mem.get_open_lending_recommendations()
+    if not recs:
+        return
+        
+    for rec in recs:
+        # If the user already provided feedback that closed the loop, performance would not be PENDING
+        # But just in case, we only process PENDING or we just update the current_credit_score.
+        
+        orig_score = rec.get("credit_score")
+        if not orig_score:
+            continue
+            
+        # 1. Mock Bureau Check (simulate credit score drift)
+        # In a real system, this would call Experian/CIBIL API
+        random.seed(rec["id"]) # Deterministic for demo
+        drift = random.uniform(-30, 20)
+        current_score = orig_score + drift
+        
+        # 2. Evaluate Performance
+        perf = "PENDING"
+        decision = str(rec.get("decision")).upper()
+        
+        if decision == "APPROVE":
+            if current_score < (orig_score - 20):
+                perf = "LOSING" # Credit deteriorated significantly, bad loan
+            else:
+                perf = "WINNING" # Credit maintained, good loan
+        elif decision == "REJECT":
+            if current_score > (orig_score + 15):
+                perf = "LOSING" # They improved significantly, we missed out
+            else:
+                perf = "WINNING" # We dodged a bullet or they stayed risky
+                
+        # Update DB
+        with mem._conn() as conn:
+            conn.execute(
+                "UPDATE lending_recommendations SET current_credit_score = ?, performance = ? WHERE id = ?",
+                (current_score, perf, rec["id"])
+            )
+            
+        # 3. Generate Agent Self-Analysis if needed
+        needs_analysis = False
+        last_analysed = rec.get("agent_analysed_at")
+        if not last_analysed:
+            needs_analysis = True
+        else:
+            hours_since = (datetime.now() - datetime.fromisoformat(last_analysed)).total_seconds() / 3600
+            if hours_since > 6:
+                needs_analysis = True
+                
+        if needs_analysis and os.environ.get("GEMINI_API_KEY"):
+            try:
+                analysis = _generate_lending_self_analysis(rec, current_score, perf)
+                mem.update_lending_analysis(rec["id"], analysis)
+            except Exception as e:
+                logger.error(f"Lending self analysis failed for rec {rec['id']}: {e}")
+
+def _generate_lending_self_analysis(rec: dict, current_score: float, perf: str) -> str:
+    prompt = f"""
+    You are an AI Senior Credit Analyst reviewing your past lending decision.
+    
+    Past Recommendation:
+    Merchant: {rec['merchant_name']}
+    Action: {rec['decision']}
+    Original Credit Score: {rec['credit_score']:.1f}
+    Rationale: {rec['rationale']}
+    
+    Current State:
+    Current Credit Score: {current_score:.1f}
+    Status: {perf} (WINNING means good decision, LOSING means bad decision)
+    
+    Provide a brief, honest self-critique (2-3 sentences max). 
+    Did your rationale hold up? If it's LOSING, what risks might you have missed in underwriting? 
+    Be direct and humble.
+    """
+    client = genai.Client()
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=0.4)
+    )
+    return response.text.strip()
