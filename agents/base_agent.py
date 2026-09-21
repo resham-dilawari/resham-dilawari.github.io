@@ -2,10 +2,13 @@
 Base Agent Class for Multi-Agent Portfolio Advisor System
 """
 import os
+import logging
 from google import genai
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
