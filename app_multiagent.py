@@ -551,6 +551,20 @@ def main():
 
             st.markdown("""
             <div class="agent-card">
+                <div class="agent-name">🧠 RAG Knowledge Agent</div>
+                Retrieves historical insights and past preferences
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="agent-card">
+                <div class="agent-name">🪞 Self-Analysis Agent</div>
+                Tracks recommendation performance and auto-calibrates
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="agent-card">
                 <div class="agent-name">👨‍💼 Orchestrator Agent</div>
                 Coordinates all agents and synthesizes insights
             </div>

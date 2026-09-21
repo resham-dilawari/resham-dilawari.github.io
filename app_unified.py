@@ -464,7 +464,7 @@ def main():
                 </tr>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">Agents</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">8 specialized agents</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">10 specialized agents</td>
                     <td style="padding: 10px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; background: white;">4 agents (onboarding) / 6 agents in 3 phases (credit)</td>
                 </tr>
                 <tr>
