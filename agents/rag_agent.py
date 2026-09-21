@@ -1,278 +1,270 @@
 """
-RAG (Retrieval-Augmented Generation) Agent
-Retrieves relevant financial knowledge, reports, and historical analysis
+rag_agent.py — RAG (Retrieval-Augmented Generation) Agent
+
+Retrieves semantically relevant financial documents from ChromaDB and
+augments analysis prompts with them.  Replaces the previous mock
+implementation that returned hard-coded strings pretending to be
+real retrieved documents.
+
+Knowledge sources (stored in chroma_db/):
+  - Historical stock analyses (seeded from simple_rag_db/knowledge_base.json)
+  - Quarterly earnings summaries (indexed after each analysis run)
+  - Tax rules and SEBI guidelines
+  - Risk management frameworks
+  - Sector research reports
 """
 from typing import Dict, Any, List
 from .base_agent import BaseAgent
-import json
 from datetime import datetime
+import json
+import logging
+import sys
+import os
+
+logger = logging.getLogger(__name__)
 
 
 class RAGAgent(BaseAgent):
     """
-    Agent that uses RAG to retrieve relevant financial knowledge.
-    
-    Knowledge Sources:
-    1. Historical stock analysis (past recommendations)
-    2. Financial reports and filings (annual reports, quarterly results)
-    3. Market research reports (sector analyses, trend reports)
-    4. Investment strategy documents (risk frameworks, allocation models)
-    5. Regulatory documents (SEBI circulars, tax guidelines)
+    Agent that uses real ChromaDB-backed RAG to retrieve relevant
+    financial knowledge and augment analysis prompts.
     """
-    
+
     def __init__(self, use_real_db: bool = True):
         super().__init__(
             agent_name="RAG Knowledge Agent",
-            specialization="retrieval and integration of relevant financial knowledge from document corpus"
+            specialization=(
+                "retrieval and integration of relevant financial knowledge "
+                "from a semantically-indexed document corpus"
+            ),
         )
-        self.use_real_db = use_real_db
-        # In production, initialize vector database connection here
-        # self.vector_db = ChromaDB() or Pinecone() or FAISS()
-        
+        self._vs = None          # lazy-init to avoid import cost at startup
+        self._use_real_db = use_real_db
+
+    # ── VectorStore (lazy) ────────────────────────────────────────────────────
+
+    def _get_vs(self):
+        """Lazy-initialise VectorStore and seed from knowledge_base.json."""
+        if self._vs is not None:
+            return self._vs
+
+        if not self._use_real_db:
+            return None
+
+        try:
+            # Adjust path relative to the project root
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            sys.path.insert(0, project_root)
+            from vector_store import VectorStore
+
+            chroma_path = os.path.join(project_root, "chroma_db")
+            kb_path = os.path.join(project_root, "simple_rag_db", "knowledge_base.json")
+
+            self._vs = VectorStore(db_path=chroma_path)
+            seeded = self._vs.seed_from_knowledge_base(kb_path)
+            if seeded:
+                logger.info(f"RAGAgent: seeded {seeded} documents into ChromaDB")
+        except Exception as e:
+            logger.error(f"RAGAgent: failed to initialise VectorStore ({e}). RAG disabled.")
+            self._vs = None
+
+        return self._vs
+
+    # ── Public API ────────────────────────────────────────────────────────────
+
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Retrieve relevant documents and augment analysis with retrieved knowledge.
-        
-        Expected context:
-        - query: User's question or analysis request
-        - ticker: Stock ticker for context
-        - analysis_type: Type of analysis (fundamental, technical, etc.)
+
+        Expected context keys:
+            query         : str  — the user's question or analysis request
+            ticker        : str  — stock ticker for context-aware filtering
+            analysis_type : str  — "stock_analysis" | "tax_rule" | "risk_framework" |
+                                    "sector_research" | "general"
         """
         self.log_action("start_rag_retrieval", {"query": context.get("query")})
-        
-        query = context.get("query", "")
-        ticker = context.get("ticker", "")
+
+        query         = context.get("query", "")
+        ticker        = context.get("ticker", "")
         analysis_type = context.get("analysis_type", "general")
-        
-        # Step 1: Retrieve relevant documents
+
+        # 1. Retrieve
         retrieved_docs = self._retrieve_documents(query, ticker, analysis_type)
-        
-        # Step 2: Augment prompt with retrieved knowledge
+
+        # 2. Build augmented prompt
         augmented_prompt = self._create_augmented_prompt(
             query=query,
             ticker=ticker,
             retrieved_docs=retrieved_docs,
-            context=context
+            context=context,
         )
-        
-        # Step 3: Generate response with augmented context
-        analysis_text = self.generate_response(augmented_prompt, temperature=0.4)
-        
-        result = {
-            "agent": self.agent_name,
-            "ticker": ticker,
-            "analysis": analysis_text,
-            "retrieved_docs": len(retrieved_docs),
-            "sources": [doc.get("source") for doc in retrieved_docs],
-            "timestamp": datetime.now().isoformat(),
-            "type": "rag_analysis"
-        }
-        
-        self.log_action("complete_rag_analysis", {
-            "docs_retrieved": len(retrieved_docs)
-        })
-        
-        return result
-    
-    def _retrieve_documents(self, query: str, ticker: str, analysis_type: str) -> List[Dict[str, Any]]:
-        """
-        Retrieve relevant documents from vector database.
-        
-        In production, this would:
-        1. Convert query to embeddings
-        2. Search vector database for similar documents
-        3. Return top-k most relevant documents
-        """
-        # MOCK IMPLEMENTATION - Replace with actual vector DB in production
-        
-        # Simulate document retrieval based on analysis type
-        mock_documents = []
-        
-        if analysis_type == "fundamental":
-            mock_documents = [
-                {
-                    "source": f"{ticker} Annual Report 2025",
-                    "content": f"Key metrics for {ticker}: Strong revenue growth of 18% YoY, improving operating margins from 22% to 24%, conservative debt management with Debt/Equity of 0.45.",
-                    "relevance_score": 0.92
-                },
-                {
-                    "source": "Sector Analysis - Indian Conglomerates",
-                    "content": "Large Indian conglomerates showing resilience amid global slowdown. Focus on domestic consumption and digital transformation driving growth.",
-                    "relevance_score": 0.85
-                },
-                {
-                    "source": "Valuation Framework - P/E Ratio Analysis",
-                    "content": "For mature companies in India, fair P/E range is 18-25x. Above 25x typically indicates growth premium or overvaluation.",
-                    "relevance_score": 0.78
-                }
-            ]
-        
-        elif analysis_type == "risk":
-            mock_documents = [
-                {
-                    "source": "Risk Management Framework 2026",
-                    "content": "Portfolio should maintain beta between 0.8-1.2 for moderate risk. Diversification across 8-12 stocks recommended for retail portfolios.",
-                    "relevance_score": 0.88
-                },
-                {
-                    "source": "Historical Volatility Analysis - Indian Markets",
-                    "content": "NIFTY50 average volatility: 18-22% annually. Stocks with >30% volatility considered high risk.",
-                    "relevance_score": 0.82
-                }
-            ]
-        
-        elif analysis_type == "tax":
-            mock_documents = [
-                {
-                    "source": "Income Tax Act - Capital Gains (Updated 2026)",
-                    "content": "LTCG (>1 year): 12.5% tax above ₹1.25L exemption. STCG (<1 year): 20% tax. Strategic timing can save significant taxes.",
-                    "relevance_score": 0.95
-                },
-                {
-                    "source": "Tax Loss Harvesting Guide",
-                    "content": "Best practiced before March 31 FY-end. Can offset gains to reduce tax liability. Ensure genuine transactions to avoid GAAR provisions.",
-                    "relevance_score": 0.89
-                }
-            ]
-        
-        else:  # general
-            mock_documents = [
-                {
-                    "source": f"Previous Analysis - {ticker} (3 months ago)",
-                    "content": f"Last analyzed {ticker} at ₹2,300. Recommended HOLD. Stock has since moved to ₹2,500. Original thesis playing out.",
-                    "relevance_score": 0.91
-                }
-            ]
-        
-        self.log_action("documents_retrieved", {
-            "count": len(mock_documents),
-            "avg_relevance": sum(d["relevance_score"] for d in mock_documents) / len(mock_documents) if mock_documents else 0
-        })
-        
-        return mock_documents
-    
-    def _create_augmented_prompt(self, query: str, ticker: str, 
-                                  retrieved_docs: List[Dict[str, Any]], 
-                                  context: Dict[str, Any]) -> str:
-        """Create prompt augmented with retrieved knowledge."""
-        
-        # Format retrieved documents
-        docs_text = "\n\n".join([
-            f"[Source: {doc['source']}]\n{doc['content']}"
-            for doc in retrieved_docs
-        ])
-        
-        augmented_prompt = f"""{self.get_system_prompt()}
 
-You have access to the following relevant knowledge retrieved from financial documents:
+        # 3. Generate response
+        analysis_text = self.generate_response(augmented_prompt, temperature=0.4)
+
+        result = {
+            "agent":          self.agent_name,
+            "ticker":         ticker,
+            "analysis":       analysis_text,
+            "retrieved_docs": len(retrieved_docs),
+            "sources":        [doc.get("source", "") for doc in retrieved_docs],
+            "avg_relevance":  (
+                round(sum(d.get("relevance_score", 0) for d in retrieved_docs) /
+                      len(retrieved_docs), 3)
+                if retrieved_docs else 0
+            ),
+            "timestamp":      datetime.now().isoformat(),
+            "type":           "rag_analysis",
+        }
+
+        self.log_action("complete_rag_analysis", {
+            "docs_retrieved": len(retrieved_docs),
+            "avg_relevance":  result["avg_relevance"],
+        })
+
+        return result
+
+    def index_document(self, document: Dict[str, Any]) -> bool:
+        """Index a new document into ChromaDB for future retrieval."""
+        vs = self._get_vs()
+        if vs is None:
+            logger.warning("RAGAgent.index_document: VectorStore unavailable.")
+            return False
+        try:
+            vs.add_document(document)
+            self.log_action("index_document", {
+                "source": document.get("source"),
+                "ticker": document.get("ticker"),
+            })
+            return True
+        except Exception as e:
+            logger.error(f"RAGAgent.index_document failed: {e}")
+            return False
+
+    def update_knowledge_base(self, analysis_result: Dict[str, Any]) -> bool:
+        """
+        Store a fresh analysis result back into the knowledge base.
+        This creates the self-learning loop: past analyses inform future retrieval.
+        """
+        vs = self._get_vs()
+        if vs is None:
+            return False
+        try:
+            doc = {
+                "content":  analysis_result.get("analysis", ""),
+                "source":   f"{analysis_result.get('ticker', 'Unknown')} "
+                            f"Analysis ({datetime.now().strftime('%Y-%m-%d')})",
+                "ticker":   analysis_result.get("ticker", ""),
+                "doc_type": "stock_analysis",
+            }
+            vs.add_document(doc)
+            self.log_action("update_knowledge_base", {
+                "ticker": doc["ticker"],
+                "source": doc["source"],
+            })
+            return True
+        except Exception as e:
+            logger.error(f"RAGAgent.update_knowledge_base failed: {e}")
+            return False
+
+    # ── Internal ──────────────────────────────────────────────────────────────
+
+    def _retrieve_documents(
+        self,
+        query: str,
+        ticker: str,
+        analysis_type: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve semantically relevant documents from ChromaDB.
+        Falls back to an empty list if the vector store is unavailable.
+        """
+        vs = self._get_vs()
+        if vs is None or vs.document_count() == 0:
+            logger.warning("RAGAgent: VectorStore empty or unavailable — returning no documents.")
+            return []
+
+        # Map analysis_type to a doc_type filter for ChromaDB
+        doc_type_map = {
+            "fundamental": "stock_analysis",
+            "risk":        "risk_framework",
+            "tax":         "tax_rule",
+            "sector":      "sector_research",
+        }
+        filter_doc_type = doc_type_map.get(analysis_type, "")
+
+        # Primary search: filter by ticker + doc_type
+        docs = vs.search(
+            query=query,
+            top_k=4,
+            filter_ticker=ticker,
+            filter_doc_type=filter_doc_type,
+        )
+
+        # Secondary search: global (no ticker filter) if primary returned < 2 results
+        if len(docs) < 2:
+            global_docs = vs.search(
+                query=query,
+                top_k=4,
+                filter_doc_type=filter_doc_type,
+            )
+            # Merge, deduplicate by source
+            seen_sources = {d["source"] for d in docs}
+            for d in global_docs:
+                if d["source"] not in seen_sources:
+                    docs.append(d)
+                    seen_sources.add(d["source"])
+
+        self.log_action("documents_retrieved", {
+            "count":           len(docs),
+            "avg_relevance":   round(sum(d.get("relevance_score", 0) for d in docs) /
+                                     len(docs), 3) if docs else 0,
+        })
+
+        return docs[:4]   # cap at 4 to keep prompts concise
+
+    def _create_augmented_prompt(
+        self,
+        query: str,
+        ticker: str,
+        retrieved_docs: List[Dict[str, Any]],
+        context: Dict[str, Any],
+    ) -> str:
+        """Build a prompt that injects the retrieved documents as grounding context."""
+
+        if retrieved_docs:
+            docs_text = "\n\n".join([
+                f"[Source: {d['source']} | Relevance: {d.get('relevance_score', 0):.2f}]\n"
+                f"{d['content']}"
+                for d in retrieved_docs
+            ])
+            retrieval_block = f"""
+You have access to the following documents retrieved from the financial knowledge base:
 
 --- RETRIEVED KNOWLEDGE ---
 {docs_text}
 --- END RETRIEVED KNOWLEDGE ---
 
-Use the above knowledge to inform your analysis, but also apply your reasoning.
-If retrieved knowledge conflicts with current data, note the discrepancy.
-Always cite sources when using retrieved information.
+Use this retrieved knowledge to ground your analysis:
+- Cite sources when you use retrieved information (e.g. "[Source: TCS Analysis 2025]")
+- If retrieved data conflicts with current market data, note the discrepancy
+- Do not fabricate data that was not in the retrieved documents or current context
+"""
+        else:
+            retrieval_block = (
+                "\nNote: No matching documents were retrieved from the knowledge base. "
+                "Base your analysis on the current data provided and your training knowledge.\n"
+            )
 
+        return f"""{self.get_system_prompt()}
+{retrieval_block}
 User Query: {query}
-Ticker: {ticker}
-Additional Context: {json.dumps(context.get('additional_data', {}), indent=2)}
+Ticker: {ticker or 'N/A'}
+Additional Context: {json.dumps(context.get('additional_data', {}), indent=2, default=str)}
 
-Provide analysis that:
-1. Integrates retrieved knowledge appropriately
-2. Cites sources for claims
-3. Notes any conflicts between retrieved knowledge and current data
-4. Provides actionable insights
-"""
-        
-        return augmented_prompt
-    
-    def index_document(self, document: Dict[str, Any]) -> bool:
-        """
-        Index a new document into the vector database.
-        
-        In production:
-        1. Extract text from document
-        2. Create embeddings
-        3. Store in vector database with metadata
-        """
-        # MOCK IMPLEMENTATION
-        self.log_action("index_document", {
-            "doc_id": document.get("id"),
-            "source": document.get("source")
-        })
-        
-        return True
-    
-    def update_knowledge_base(self, analysis_result: Dict[str, Any]) -> bool:
-        """
-        Store new analysis results back into knowledge base for future retrieval.
-        This creates a learning loop where past analyses inform future ones.
-        """
-        # MOCK IMPLEMENTATION
-        self.log_action("update_knowledge_base", {
-            "ticker": analysis_result.get("ticker"),
-            "timestamp": analysis_result.get("timestamp")
-        })
-        
-        return True
-
-
-# PRODUCTION IMPLEMENTATION GUIDE:
-
-"""
-To implement RAG in production, follow these steps:
-
-1. CHOOSE VECTOR DATABASE:
-   - ChromaDB (open-source, easy to start)
-   - Pinecone (managed, scalable)
-   - Weaviate (advanced features)
-   - FAISS (Facebook, local/fast)
-
-2. INSTALL DEPENDENCIES:
-   pip install chromadb
-   pip install sentence-transformers  # for embeddings
-   pip install langchain  # optional, for easier RAG workflows
-
-3. CREATE EMBEDDINGS:
-   from sentence_transformers import SentenceTransformer
-   
-   model = SentenceTransformer('all-MiniLM-L6-v2')
-   embeddings = model.encode(["document text here"])
-
-4. INDEX DOCUMENTS:
-   import chromadb
-   
-   client = chromadb.Client()
-   collection = client.create_collection("financial_docs")
-   
-   collection.add(
-       documents=["Annual report text..."],
-       metadatas=[{"source": "RELIANCE_AR_2025", "ticker": "RELIANCE.NS"}],
-       ids=["doc1"]
-   )
-
-5. RETRIEVE DOCUMENTS:
-   results = collection.query(
-       query_texts=["What is the company's debt level?"],
-       n_results=3
-   )
-
-6. AUGMENT PROMPTS:
-   retrieved_context = "\n".join(results['documents'])
-   augmented_prompt = f"Context: {retrieved_context}\n\nQuestion: {user_query}"
-
-7. DOCUMENT SOURCES:
-   - Annual reports (download from company websites)
-   - Quarterly results (BSE/NSE announcements)
-   - Research reports (if you have access)
-   - Your own past analyses (self-learning loop)
-   - SEBI circulars, tax guidelines
-   - Market news archives
-
-8. CONTINUOUS LEARNING:
-   After each analysis:
-   - Store the analysis result
-   - Index it for future retrieval
-   - This creates a knowledge base that grows over time
+Provide a thorough analysis that:
+1. Integrates retrieved knowledge with current data
+2. Cites sources for retrieved facts
+3. Flags any conflicts between past analyses and current market data
+4. Gives clear, actionable insights
 """
