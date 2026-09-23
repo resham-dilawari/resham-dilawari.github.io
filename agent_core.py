@@ -219,6 +219,7 @@ class AdvisorAgent:
                 system_instruction=system_prompt,
                 tools=[TOOL_DECLARATIONS],
                 temperature=0.7,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             ),
         )
 

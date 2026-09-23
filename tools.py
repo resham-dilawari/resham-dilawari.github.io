@@ -16,9 +16,32 @@ Tools:
 import yfinance as yf
 from google.genai import types
 import logging
+from functools import lru_cache
+import time
 
 logger = logging.getLogger(__name__)
 
+# Basic in-memory cache with TTL (Time To Live) to prevent yfinance rate limits
+class TTLCache:
+    def __init__(self, ttl_seconds):
+        self.cache = {}
+        self.ttl = ttl_seconds
+
+    def get(self, key):
+        if key in self.cache:
+            val, timestamp = self.cache[key]
+            if time.time() - timestamp < self.ttl:
+                return val
+        return None
+
+    def set(self, key, value):
+        self.cache[key] = (value, time.time())
+
+# 5-minute TTL cache for price, 1-hour for info/ratios
+_price_cache = TTLCache(300) 
+_info_cache = TTLCache(3600)
+_news_cache = TTLCache(900)
+_ratio_cache = TTLCache(3600)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Tool Implementations
@@ -26,6 +49,9 @@ logger = logging.getLogger(__name__)
 
 def get_stock_price(ticker: str) -> dict:
     """Fetch live price, previous close, and % change for a ticker."""
+    cached = _price_cache.get(ticker)
+    if cached is not None:
+        return cached
     try:
         stock = yf.Ticker(ticker)
         fi = stock.fast_info
@@ -33,50 +59,68 @@ def get_stock_price(ticker: str) -> dict:
         prev = fi.previous_close
         change = last - prev
         pct = (change / prev) * 100 if prev else 0
-        return {
+        result = {
             "ticker":          ticker,
             "current_price":   round(last, 2),
             "previous_close":  round(prev, 2),
             "change":          round(change, 2),
             "change_pct":      round(pct, 2),
         }
+        _price_cache.set(ticker, result)
+        return result
     except Exception as e:
-        return {"error": str(e), "ticker": ticker}
+        logger.error(f"yfinance price error for {ticker}: {e}")
+        return {"error": "data unavailable", "ticker": ticker, "details": str(e)}
 
 
 def get_stock_info(ticker: str) -> dict:
     """Fetch company name, sector, industry and business summary."""
+    cached = _info_cache.get(ticker)
+    if cached is not None:
+        return cached
     try:
         info = yf.Ticker(ticker).info
-        return {
+        result = {
             "ticker":   ticker,
             "name":     info.get("longName", "N/A"),
             "sector":   info.get("sector", "N/A"),
             "industry": info.get("industry", "N/A"),
             "summary":  (info.get("longBusinessSummary") or info.get("description", "N/A"))[:800],
         }
+        _info_cache.set(ticker, result)
+        return result
     except Exception as e:
-        return {"error": str(e), "ticker": ticker}
+        logger.error(f"yfinance info error for {ticker}: {e}")
+        return {"error": "data unavailable", "ticker": ticker, "details": str(e)}
 
 
 def get_recent_news(ticker: str) -> dict:
     """Fetch up to 5 recent news headlines for a ticker."""
+    cached = _news_cache.get(ticker)
+    if cached is not None:
+        return cached
     try:
         items = yf.Ticker(ticker).news or []
         headlines = [
             {"title": n.get("title", ""), "publisher": n.get("publisher", "")}
             for n in items[:5]
         ]
-        return {"ticker": ticker, "headlines": headlines}
+        result = {"ticker": ticker, "headlines": headlines}
+        _news_cache.set(ticker, result)
+        return result
     except Exception as e:
-        return {"error": str(e), "ticker": ticker}
+        logger.error(f"yfinance news error for {ticker}: {e}")
+        return {"error": "data unavailable", "ticker": ticker, "details": str(e)}
 
 
 def get_financial_ratios(ticker: str) -> dict:
     """Fetch key valuation and financial ratios."""
+    cached = _ratio_cache.get(ticker)
+    if cached is not None:
+        return cached
     try:
         info = yf.Ticker(ticker).info
-        return {
+        result = {
             "ticker":              ticker,
             "pe_ratio":            info.get("trailingPE"),
             "forward_pe":          info.get("forwardPE"),
@@ -91,8 +135,11 @@ def get_financial_ratios(ticker: str) -> dict:
             "profit_margin":       info.get("profitMargins"),
             "revenue_growth":      info.get("revenueGrowth"),
         }
+        _ratio_cache.set(ticker, result)
+        return result
     except Exception as e:
-        return {"error": str(e), "ticker": ticker}
+        logger.error(f"yfinance ratios error for {ticker}: {e}")
+        return {"error": "data unavailable", "ticker": ticker, "details": str(e)}
 
 
 def compare_stocks(tickers: list[str]) -> dict:
