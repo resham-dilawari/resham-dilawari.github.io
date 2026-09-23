@@ -508,15 +508,46 @@ def main():
         # Success message
         st.success("✅ Multi-agent analysis complete!")
 
-        # Download report button
-        if st.button("📥 Download Full Report"):
-            report_json = json.dumps(results, indent=2, default=str)
-            st.download_button(
-                label="Download JSON Report",
-                data=report_json,
-                file_name=f"portfolio_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
+        # Generate Markdown Report
+        md_lines = ["# Multi-Agent Portfolio Analysis Report\n"]
+        
+        if "synthesis" in results:
+            md_lines.append("## Executive Summary\n")
+            md_lines.append(results["synthesis"] + "\n")
+        elif "final_synthesis" in results:
+            md_lines.append("## Executive Summary\n")
+            md_lines.append(results["final_synthesis"] + "\n")
+            
+        md_lines.append("## Detailed Agent Insights\n")
+        
+        def append_md_agent_results(res_dict):
+            for agent_name, agent_result in res_dict.items():
+                md_lines.append(f"### {agent_name.upper()} Agent")
+                if isinstance(agent_result, dict) and "analysis" in agent_result:
+                    md_lines.append(agent_result["analysis"] + "\n")
+                else:
+                    md_lines.append(str(agent_result) + "\n")
+                    
+        if analysis_mode == "Full Advisory":
+            md_lines.append("### Portfolio Analysis\n")
+            if "portfolio_analysis" in results:
+                append_md_agent_results(results["portfolio_analysis"].get("agent_results", {}))
+                
+            md_lines.append("### Investment Suggestions\n")
+            if "investment_suggestions" in results:
+                append_md_agent_results(results["investment_suggestions"].get("agent_results", {}))
+        else:
+            append_md_agent_results(results.get("agent_results", {}))
+            
+        report_md = "\n".join(md_lines)
+        
+        st.download_button(
+            label="📥 Download Full Report (PDF/Markdown)",
+            data=report_md,
+            file_name=f"portfolio_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+            mime="text/markdown",
+            use_container_width=True
+        )
 
     elif not st.session_state.get("analysis_results"):
         # Show agent architecture
