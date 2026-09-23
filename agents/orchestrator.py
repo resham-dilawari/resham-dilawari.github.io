@@ -86,35 +86,51 @@ class OrchestratorAgent(BaseAgent):
         
         # Execute agents in parallel where possible
         with ThreadPoolExecutor(max_workers=4) as executor:
+            
+            def _run_agent_on_list(agent, data_list):
+                if not data_list:
+                    return {"analysis": "No data provided."}
+                results = []
+                for item in data_list:
+                    try:
+                        res = agent.analyze(item)
+                        ticker = item.get("ticker", "Unknown")
+                        analysis_text = res.get("analysis", str(res))
+                        results.append(f"#### {ticker}\n{analysis_text}")
+                    except Exception as e:
+                        results.append(f"#### {item.get('ticker', 'Unknown')}\nError: {e}")
+                return {"analysis": "\n\n".join(results)}
+
             # These can run in parallel - they analyze the same data independently
             futures = {
                 "fundamental": executor.submit(
-                    self.agents["fundamental"].analyze,
+                    _run_agent_on_list,
+                    self.agents["fundamental"],
                     portfolio_data
                 ),
                 "technical": executor.submit(
-                    self.agents["technical"].analyze,
+                    _run_agent_on_list,
+                    self.agents["technical"],
                     portfolio_data
                 ),
                 "sentiment": executor.submit(
-                    self.agents["sentiment"].analyze,
+                    _run_agent_on_list,
+                    self.agents["sentiment"],
                     portfolio_data
                 ),
             }
             
             for agent_name, future in futures.items():
                 try:
-                    agent_results[agent_name] = future.result(timeout=30)
+                    agent_results[agent_name] = future.result(timeout=60)
                 except Exception as e:
                     agent_results[agent_name] = {"error": str(e)}
         
         # Risk analysis needs results from previous agents
-        risk_context = {
-            "portfolio_data": portfolio_data,
-            "tickers": tickers,
-            "previous_analysis": agent_results
-        }
-        agent_results["risk"] = self.agents["risk"].analyze(risk_context)
+        try:
+            agent_results["risk"] = self.agents["risk"].portfolio_diversification_check(portfolio_data)
+        except Exception as e:
+            agent_results["risk"] = {"error": str(e)}
 
         
         # Synthesize all agent insights
