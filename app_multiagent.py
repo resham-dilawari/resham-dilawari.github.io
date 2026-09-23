@@ -420,11 +420,9 @@ def main():
     if st.session_state.get("analysis_results"):
         results = st.session_state.analysis_results
         # Create tabs for different views
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3 = st.tabs([
             "📊 Executive Summary",
-            "🤖 Agent Insights",
             "📈 Detailed Analysis",
-            "🔍 Execution Log",
             "💬 Talk to Advisor"
         ])
 
@@ -439,47 +437,29 @@ def main():
                 st.info("No synthesis available")
 
         with tab2:
-            st.header("🤖 Individual Agent Insights")
-
-            agent_results = results.get("agent_results", {})
-
-            for agent_name, agent_result in agent_results.items():
-                with st.expander(f"🔍 {agent_name.upper()} Agent", expanded=False):
-                    if isinstance(agent_result, dict) and "analysis" in agent_result:
-                        st.markdown(agent_result["analysis"])
-                    else:
-                        st.write(agent_result)
-
-        with tab3:
             st.header("📈 Detailed Analysis")
+            
+            # Helper to display agent results
+            def display_agent_results(agent_res_dict):
+                for agent_name, agent_result in agent_res_dict.items():
+                    with st.expander(f"🔍 {agent_name.upper()} Agent", expanded=False):
+                        if isinstance(agent_result, dict) and "analysis" in agent_result:
+                            st.markdown(agent_result["analysis"])
+                        else:
+                            st.write(agent_result)
 
-            # Show raw agent results
             if analysis_mode == "Full Advisory":
                 st.subheader("Portfolio Analysis")
                 if "portfolio_analysis" in results:
-                    st.json(results["portfolio_analysis"].get("agent_results", {}))
+                    display_agent_results(results["portfolio_analysis"].get("agent_results", {}))
 
                 st.subheader("Investment Suggestions")
                 if "investment_suggestions" in results:
-                    st.json(results["investment_suggestions"].get("agent_results", {}))
+                    display_agent_results(results["investment_suggestions"].get("agent_results", {}))
             else:
-                st.json(results)
+                display_agent_results(results.get("agent_results", {}))
 
-        with tab4:
-            st.header("🔍 Execution Log & Transparency")
-            st.write("**Orchestrator Execution Log:**")
-
-            if st.session_state.orchestrator:
-                logs = st.session_state.orchestrator.get_execution_log()
-                for log in logs:
-                    with st.expander(f"{log['action']} - {log['timestamp']}", expanded=False):
-                        st.json(log)
-
-            st.write("**Agent Health Status:**")
-            health = st.session_state.orchestrator.get_agent_health_status()
-            st.json(health)
-
-        with tab5:
+        with tab3:
             st.header("💬 Talk to Advisor")
             st.markdown("Have questions about the analysis or want to explore other options? Chat with your AI advisor below.")
 
