@@ -420,11 +420,12 @@ def main():
     if st.session_state.get("analysis_results"):
         results = st.session_state.analysis_results
         # Create tabs for different views
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📊 Executive Summary",
             "🤖 Agent Insights",
             "📈 Detailed Analysis",
-            "🔍 Execution Log"
+            "🔍 Execution Log",
+            "💬 Talk to Advisor"
         ])
 
         # Display results in tabs
@@ -477,6 +478,52 @@ def main():
             st.write("**Agent Health Status:**")
             health = st.session_state.orchestrator.get_agent_health_status()
             st.json(health)
+
+        with tab5:
+            st.header("💬 Talk to Advisor")
+            st.markdown("Have questions about the analysis or want to explore other options? Chat with your AI advisor below.")
+
+            if 'advisor_messages' not in st.session_state:
+                st.session_state.advisor_messages = []
+            
+            # Display chat messages
+            for msg in st.session_state.advisor_messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+            
+            if prompt := st.chat_input("Ask a question about the analysis..."):
+                st.session_state.advisor_messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        from google import genai
+                        from google.genai import types
+                        client = genai.Client()
+                        
+                        sys_prompt = f"You are a helpful financial advisor. You have just completed an analysis for the user. Here are the results: {json.dumps(results, default=str)[:15000]}. Answer the user's questions based on this analysis."
+                        
+                        try:
+                            # Use simple generate_content
+                            history_contents = []
+                            for m in st.session_state.advisor_messages[:-1]: # exclude the prompt we just added
+                                history_contents.append(
+                                    types.Content(role="user" if m["role"] == "user" else "model", parts=[types.Part.from_text(text=m["content"])])
+                                )
+                            
+                            chat = client.chats.create(
+                                model="gemini-3.6-flash",
+                                config=types.GenerateContentConfig(system_instruction=sys_prompt, temperature=0.7),
+                                history=history_contents
+                            )
+                            response = chat.send_message(prompt)
+                            response_text = response.text
+                        except Exception as e:
+                            response_text = f"I'm sorry, I ran into an error: {e}"
+                        
+                        st.markdown(response_text)
+                        st.session_state.advisor_messages.append({"role": "assistant", "content": response_text})
 
         # Success message
         st.success("✅ Multi-agent analysis complete!")
